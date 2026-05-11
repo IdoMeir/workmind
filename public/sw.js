@@ -1,10 +1,8 @@
-const CACHE = 'workmind-v1';
-const SHELL = ['/', '/entries', '/clients', '/tax', '/settings', '/monthly', '/receipts'];
+const CACHE = 'workmind-v2';
 
-self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting())
-  );
+self.addEventListener('install', () => {
+  // Skip waiting immediately — no pre-caching of protected routes
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
@@ -16,22 +14,27 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
-  // Skip non-GET and cross-origin
-  if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
-  // API calls: network-first
-  if (url.pathname.startsWith('/api/')) {
-    e.respondWith(
-      fetch(e.request).catch(() => caches.match(e.request))
-    );
-    return;
-  }
-  // Shell: cache-first
+  if (url.origin !== self.location.origin) return;
+
+  // Let the browser handle API calls, auth pages, and Next.js internals directly
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/login') ||
+    url.pathname.startsWith('/register') ||
+    url.pathname.startsWith('/_next/')
+  ) return;
+
+  // Network-first for app pages; cache as offline fallback
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
-      const clone = res.clone();
-      caches.open(CACHE).then(cache => cache.put(e.request, clone));
-      return res;
-    }))
+    fetch(e.request)
+      .then(response => {
+        if (response.ok) {
+          caches.open(CACHE).then(cache => cache.put(e.request, response.clone()));
+        }
+        return response;
+      })
+      .catch(() => caches.match(e.request))
   );
 });
