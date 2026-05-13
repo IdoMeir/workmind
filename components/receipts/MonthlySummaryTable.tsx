@@ -2,13 +2,16 @@
 
 import { formatCurrency } from '@/lib/hebrew-format';
 import type { ClientMonthlySummary } from '@/types';
+import Link from 'next/link';
 
 interface Props {
   clientSummaries: ClientMonthlySummary[];
   onGenerateReceipt: (clientId: string) => void;
+  year: number;
+  month: number;
 }
 
-export default function MonthlySummaryTable({ clientSummaries, onGenerateReceipt }: Props) {
+export default function MonthlySummaryTable({ clientSummaries, onGenerateReceipt, year, month }: Props) {
   if (clientSummaries.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
@@ -50,10 +53,18 @@ export default function MonthlySummaryTable({ clientSummaries, onGenerateReceipt
               ))}
           </div>
 
-          <div className="px-4 py-3 border-t border-gray-100">
+          <div className="px-4 py-3 border-t border-gray-100 flex gap-2">
+            {summary.totalHours > 0 && (
+              <Link
+                href={`/reports/hours?year=${year}&month=${month}&client_id=${summary.clientId}`}
+                className="flex-1 border border-gray-300 text-gray-700 text-sm font-medium py-2 px-3 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors text-center"
+              >
+                דו&quot;ח שעות
+              </Link>
+            )}
             <button
               onClick={() => onGenerateReceipt(summary.clientId)}
-              className="w-full bg-indigo-600 text-white text-sm font-medium py-2 px-4 rounded-lg hover:bg-indigo-700 active:bg-indigo-800 transition-colors"
+              className="flex-1 bg-indigo-600 text-white text-sm font-medium py-2 px-3 rounded-lg hover:bg-indigo-700 active:bg-indigo-800 transition-colors"
             >
               הפק קבלה ←
             </button>

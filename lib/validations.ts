@@ -1,20 +1,29 @@
 import { z } from 'zod';
 
+const ratePresetSchema = z.object({
+  name: z.string().min(1).max(100),
+  rate: z.number().positive(),
+  type: z.enum(['hourly', 'daily', 'fixed']),
+});
+
 export const createClientSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(1000).optional().nullable(),
   hourly_rate: z.number().positive().optional().nullable(),
   event_rate: z.number().positive().optional().nullable(),
+  rate_presets: z.array(ratePresetSchema).optional().nullable(),
   contact_info: z.string().max(1000).optional().nullable(),
-}).refine(data => data.hourly_rate || data.event_rate, {
-  message: 'חייב להגדיר לפחות תעריף שעתי או תעריף אירוע',
-});
+}).refine(
+  data => data.hourly_rate || data.event_rate || (data.rate_presets && data.rate_presets.length > 0),
+  { message: 'חייב להגדיר לפחות תעריף שעתי, תעריף אירוע, או תעריף מוגדר' }
+);
 
 export const updateClientSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(1000).optional().nullable(),
   hourly_rate: z.number().positive().optional().nullable(),
   event_rate: z.number().positive().optional().nullable(),
+  rate_presets: z.array(ratePresetSchema).optional().nullable(),
   contact_info: z.string().max(1000).optional().nullable(),
   is_active: z.boolean().optional(),
 });

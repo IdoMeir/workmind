@@ -1,14 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Client } from '@/types';
-import { X } from 'lucide-react';
+import { Client, RatePreset } from '@/types';
+import { X, Plus, Trash2 } from 'lucide-react';
 
 interface EditClientDialogProps {
   client: Client | null;
   onClose: () => void;
   onSave: (client: Client) => void;
 }
+
+const RATE_TYPE_LABELS: Record<RatePreset['type'], string> = {
+  hourly: 'שעתי',
+  daily: 'יומי',
+  fixed: 'קבוע',
+};
 
 export default function EditClientDialog({ client, onClose, onSave }: EditClientDialogProps) {
   const [form, setForm] = useState({
@@ -19,6 +25,7 @@ export default function EditClientDialog({ client, onClose, onSave }: EditClient
     contact_info: '',
     is_active: true,
   });
+  const [presets, setPresets] = useState<RatePreset[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -32,6 +39,7 @@ export default function EditClientDialog({ client, onClose, onSave }: EditClient
         contact_info: client.contact_info ?? '',
         is_active: client.is_active,
       });
+      setPresets(client.rate_presets ?? []);
       setError('');
     }
   }, [client]);
@@ -39,15 +47,28 @@ export default function EditClientDialog({ client, onClose, onSave }: EditClient
   if (!client) return null;
   const clientId = client.id;
 
+  function addPreset() {
+    setPresets(p => [...p, { name: '', rate: 0, type: 'hourly' }]);
+  }
+
+  function removePreset(i: number) {
+    setPresets(p => p.filter((_, idx) => idx !== i));
+  }
+
+  function updatePreset(i: number, field: keyof RatePreset, value: string | number) {
+    setPresets(p => p.map((pr, idx) => idx === i ? { ...pr, [field]: value } : pr));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
 
     const hourly = form.hourly_rate ? parseFloat(form.hourly_rate) : null;
     const event = form.event_rate ? parseFloat(form.event_rate) : null;
+    const validPresets = presets.filter(p => p.name.trim() && p.rate > 0);
 
-    if (!hourly && !event) {
-      setError('חייב להגדיר לפחות תעריף שעתי או תעריף אירוע');
+    if (!hourly && !event && validPresets.length === 0) {
+      setError('חייב להגדיר לפחות תעריף שעתי, תעריף אירוע, או תעריף מוגדר');
       return;
     }
 
@@ -61,6 +82,7 @@ export default function EditClientDialog({ client, onClose, onSave }: EditClient
           description: form.description.trim() || null,
           hourly_rate: hourly,
           event_rate: event,
+          rate_presets: validPresets.length > 0 ? validPresets : null,
           contact_info: form.contact_info.trim() || null,
           is_active: form.is_active,
         }),
@@ -81,15 +103,15 @@ export default function EditClientDialog({ client, onClose, onSave }: EditClient
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl p-5 shadow-xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
+      <div className="relative bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl flex flex-col max-h-[92dvh] sm:max-h-[85vh]">
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
           <h2 className="text-lg font-semibold">עריכת לקוח</h2>
           <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600">
             <X size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form id="edit-client-form" onSubmit={handleSubmit} className="overflow-y-auto flex-1 px-5 space-y-3 pb-2">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">שם לקוח *</label>
             <input
@@ -137,6 +159,59 @@ export default function EditClientDialog({ client, onClose, onSave }: EditClient
             </div>
           </div>
 
+          {/* Rate presets */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">תעריפים מוגדרים</label>
+              <button
+                type="button"
+                onClick={addPreset}
+                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700"
+              >
+                <Plus size={14} /> הוסף תעריף
+              </button>
+            </div>
+            {presets.map((preset, i) => (
+              <div key={i} className="flex gap-2 mb-2 items-center">
+                <input
+                  type="text"
+                  value={preset.name}
+                  onChange={e => updatePreset(i, 'name', e.target.value)}
+                  placeholder="מחסן"
+                  className="flex-1 border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={preset.rate || ''}
+                  onChange={e => updatePreset(i, 'rate', parseFloat(e.target.value) || 0)}
+                  placeholder="₪"
+                  className="w-20 border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <select
+                  value={preset.type}
+                  onChange={e => updatePreset(i, 'type', e.target.value as RatePreset['type'])}
+                  className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {(Object.entries(RATE_TYPE_LABELS) as [RatePreset['type'], string][]).map(([v, label]) => (
+                    <option key={v} value={v}>{label}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => removePreset(i)}
+                  className="p-1 text-gray-400 hover:text-red-500"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+            {presets.length === 0 && (
+              <p className="text-xs text-gray-400">תעריפים מוגדרים מאפשרים בחירת תעריף בעת הוספת שעות</p>
+            )}
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">פרטי קשר</label>
             <input
@@ -158,15 +233,18 @@ export default function EditClientDialog({ client, onClose, onSave }: EditClient
           </label>
 
           {error && <p className="text-red-600 text-sm">{error}</p>}
+        </form>
 
+        <div className="shrink-0 px-5 pt-3 pb-5">
           <button
             type="submit"
+            form="edit-client-form"
             disabled={loading || !form.name.trim()}
-            className="w-full bg-blue-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors mt-1"
+            className="w-full bg-blue-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
             {loading ? 'שומר...' : 'שמור שינויים'}
           </button>
-        </form>
+        </div>
       </div>
     </div>
   );

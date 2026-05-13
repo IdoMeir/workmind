@@ -47,4 +47,13 @@ button, a {
     box-shadow: none;
     padding: 0;
   }
+  /* Hours report print */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  th, td {
+    border: 1px solid #d1d5db;
+    padding: 6px 10px;
+  }
 }

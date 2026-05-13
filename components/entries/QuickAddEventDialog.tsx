@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Client, WorkEntry } from '@/types';
 import { X } from 'lucide-react';
 import { todayISO } from '@/lib/hebrew-format';
+import { useVisualViewport } from '@/hooks/useVisualViewport';
 
 interface QuickAddEventDialogProps {
   open: boolean;
@@ -14,6 +15,7 @@ interface QuickAddEventDialogProps {
 
 export default function QuickAddEventDialog({ open, onClose, onAdd, clients }: QuickAddEventDialogProps) {
   const activeClients = clients.filter(c => c.is_active);
+  const vvh = useVisualViewport();
 
   const [eventName, setEventName] = useState('');
   const [clientId, setClientId] = useState('');
@@ -24,8 +26,6 @@ export default function QuickAddEventDialog({ open, onClose, onAdd, clients }: Q
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Derive at render time so single-client default works even when clients prop
-  // arrives after the dialog opens.
   const effectiveClientId = activeClients.length === 1 ? activeClients[0].id : clientId;
 
   useEffect(() => {
@@ -46,6 +46,8 @@ export default function QuickAddEventDialog({ open, onClose, onAdd, clients }: Q
   const previewAmount = customAmount
     ? parseFloat(customAmount)
     : selectedClient?.event_rate ?? null;
+
+  const dialogStyle = vvh > 0 ? { maxHeight: `${Math.floor(vvh * 0.92)}px` } : undefined;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -80,10 +82,11 @@ export default function QuickAddEventDialog({ open, onClose, onAdd, clients }: Q
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
-      {/* Dialog: flex column, capped height so it never grows behind the keyboard */}
-      <div className="relative bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-xl flex flex-col max-h-[90dvh] sm:max-h-[85vh]">
-
-        {/* Header — always visible */}
+      <div
+        className="relative bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-xl flex flex-col max-h-[92dvh] sm:max-h-[85vh]"
+        style={dialogStyle}
+      >
+        {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
           <h2 className="text-lg font-semibold">הוסף אירוע</h2>
           <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600">
@@ -177,7 +180,7 @@ export default function QuickAddEventDialog({ open, onClose, onAdd, clients }: Q
           {error && <p className="text-red-600 text-sm">{error}</p>}
         </form>
 
-        {/* Save button — always visible above keyboard */}
+        {/* Save button — always above keyboard */}
         <div className="shrink-0 px-5 pt-3 pb-5">
           <button
             type="submit"

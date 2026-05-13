@@ -83,6 +83,8 @@ export default function MonthlyPage() {
             <MonthlySummaryTable
               clientSummaries={summary?.byClient ?? []}
               onGenerateReceipt={(cid) => setDialogClientId(cid)}
+              year={year}
+              month={month}
             />
           </>
         )}

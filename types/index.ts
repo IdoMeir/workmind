@@ -19,6 +19,12 @@ export interface UserSettings {
   updated_at: string;
 }
 
+export interface RatePreset {
+  name: string;
+  rate: number;
+  type: 'hourly' | 'daily' | 'fixed';
+}
+
 export interface Client {
   id: string;
   user_id: string;
@@ -26,6 +32,7 @@ export interface Client {
   description: string | null;
   hourly_rate: number | null;
   event_rate: number | null;
+  rate_presets: RatePreset[] | null;
   contact_info: string | null;
   is_active: boolean;
   created_at: string;
