@@ -63,7 +63,7 @@ export default function EditEntryDialog({ entry, onClose, onSave }: EditEntryDia
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center pb-above-nav">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl p-5 shadow-xl">
         <div className="flex items-center justify-between mb-4">

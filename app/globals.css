@@ -34,6 +34,20 @@ button, a {
   -webkit-overflow-scrolling: touch;
 }
 
+/*
+ * Bottom-sheet dialogs must sit above the fixed BottomNav (~60px) plus
+ * the device safe-area inset (notched phones). Apply to the dialog's
+ * outer fixed overlay container. Reset to 0 on sm+ (dialog is centered).
+ */
+.pb-above-nav {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 3.75rem);
+}
+@media (min-width: 640px) {
+  .pb-above-nav {
+    padding-bottom: 0;
+  }
+}
+
 @media print {
   body {
     background: white;

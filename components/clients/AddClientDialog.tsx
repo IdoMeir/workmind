@@ -87,7 +87,7 @@ export default function AddClientDialog({ open, onClose, onAdd }: AddClientDialo
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center pb-above-nav">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl flex flex-col max-h-[92dvh] sm:max-h-[85vh]">
         <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
