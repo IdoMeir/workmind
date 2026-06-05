@@ -10,10 +10,36 @@ interface EditEntryDialogProps {
   onSave: (entry: WorkEntry) => void;
 }
 
+function parseTimeToMinutes(time: string): number | null {
+  const [h, m] = time.split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return null;
+  return h * 60 + m;
+}
+
+function calcHoursFromRange(from: string, to: string): number | null {
+  const fromMin = parseTimeToMinutes(from);
+  const toMin = parseTimeToMinutes(to);
+  if (fromMin === null || toMin === null) return null;
+  let diff = toMin - fromMin;
+  if (diff < 0) diff += 24 * 60;
+  if (diff === 0) return null;
+  const rounded = Math.round(diff / 15) * 0.25;
+  return Math.max(0.25, Math.min(24, rounded));
+}
+
+function parseDescriptionToTimeParts(desc: string | null): { timeFrom: string; timeTo: string; rest: string } {
+  if (!desc) return { timeFrom: '', timeTo: '', rest: '' };
+  const match = desc.match(/^(\d{2}:\d{2})[–-](\d{2}:\d{2})\s*[|]?\s*(.*)/);
+  if (match) return { timeFrom: match[1], timeTo: match[2], rest: match[3].trim() };
+  return { timeFrom: '', timeTo: '', rest: desc };
+}
+
 export default function EditEntryDialog({ entry, onClose, onSave }: EditEntryDialogProps) {
   const [date, setDate] = useState('');
   const [amount, setAmount] = useState('');
   const [hours, setHours] = useState('');
+  const [timeFrom, setTimeFrom] = useState('');
+  const [timeTo, setTimeTo] = useState('');
   const [eventName, setEventName] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,10 +51,20 @@ export default function EditEntryDialog({ entry, onClose, onSave }: EditEntryDia
       setAmount(String(entry.amount));
       setHours(entry.hours ? String(entry.hours) : '');
       setEventName(entry.event_name ?? '');
-      setDescription(entry.description ?? '');
+      const { timeFrom: tf, timeTo: tt, rest } = parseDescriptionToTimeParts(entry.description);
+      setTimeFrom(tf);
+      setTimeTo(tt);
+      setDescription(rest);
       setError('');
     }
   }, [entry]);
+
+  useEffect(() => {
+    if (timeFrom && timeTo) {
+      const computed = calcHoursFromRange(timeFrom, timeTo);
+      if (computed !== null) setHours(String(computed));
+    }
+  }, [timeFrom, timeTo]);
 
   if (!entry) return null;
   const entryId = entry.id;
@@ -39,10 +75,16 @@ export default function EditEntryDialog({ entry, onClose, onSave }: EditEntryDia
     setError('');
     setLoading(true);
 
+    let finalDescription = description.trim() || null;
+    if (isHours && timeFrom && timeTo) {
+      const timeLabel = `${timeFrom}–${timeTo}`;
+      finalDescription = finalDescription ? `${timeLabel} | ${finalDescription}` : timeLabel;
+    }
+
     const body: Record<string, unknown> = {
       entry_date: date,
       amount: parseFloat(amount),
-      description: description.trim() || null,
+      description: finalDescription,
     };
     if (isHours) body.hours = parseFloat(hours);
     else body.event_name = eventName.trim();
@@ -73,18 +115,40 @@ export default function EditEntryDialog({ entry, onClose, onSave }: EditEntryDia
 
         <form onSubmit={handleSubmit} className="space-y-3">
           {isHours ? (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">שעות</label>
-              <input
-                type="number"
-                min="0.25"
-                max="24"
-                step="0.25"
-                value={hours}
-                onChange={e => setHours(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">משעה</label>
+                  <input
+                    type="time"
+                    value={timeFrom}
+                    onChange={e => setTimeFrom(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">עד שעה</label>
+                  <input
+                    type="time"
+                    value={timeTo}
+                    onChange={e => setTimeTo(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">שעות</label>
+                <input
+                  type="number"
+                  min="0.25"
+                  max="24"
+                  step="0.25"
+                  value={hours}
+                  onChange={e => setHours(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </>
           ) : (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">שם האירוע</label>

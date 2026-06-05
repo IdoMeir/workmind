@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { WorkEntry, Client } from '@/types';
-import { Printer, ArrowRight } from 'lucide-react';
+import { Printer, Download, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface HoursReportViewProps {
@@ -26,9 +27,33 @@ function extractTimeRange(desc: string | null): { timeRange: string | null; rest
   return { timeRange: null, rest: desc };
 }
 
+function splitTimeRange(timeRange: string | null): { from: string; to: string } {
+  if (!timeRange) return { from: '—', to: '—' };
+  const parts = timeRange.split(/[–-]/);
+  return { from: parts[0]?.trim() ?? '—', to: parts[1]?.trim() ?? '—' };
+}
+
 export default function HoursReportView({ entries, client, year, month }: HoursReportViewProps) {
   const router = useRouter();
   const monthName = MONTH_NAMES[month - 1];
+  const [pdfMode, setPdfMode] = useState(false);
+
+  function downloadPdf() {
+    const originalTitle = document.title;
+    document.title = `דוח-שעות-${client.name}-${monthName}`;
+    setPdfMode(true);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.print();
+        const restore = () => {
+          document.title = originalTitle;
+          setPdfMode(false);
+          window.removeEventListener('afterprint', restore);
+        };
+        window.addEventListener('afterprint', restore);
+      });
+    });
+  }
 
   const hoursEntries = entries
     .filter(e => e.entry_type === 'hours')
@@ -47,10 +72,17 @@ export default function HoursReportView({ entries, client, year, month }: HoursR
         <span className="font-medium text-gray-800 flex-1">דו&quot;ח שעות — {client.name}</span>
         <button
           onClick={() => window.print()}
-          className="flex items-center gap-2 bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="flex items-center gap-2 bg-gray-100 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-200"
         >
           <Printer size={16} />
           הדפס
+        </button>
+        <button
+          onClick={downloadPdf}
+          className="flex items-center gap-2 bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-700"
+        >
+          <Download size={16} />
+          הורד PDF
         </button>
       </div>
 
@@ -65,47 +97,92 @@ export default function HoursReportView({ entries, client, year, month }: HoursR
 
         {/* Table */}
         <div className="bg-white rounded-xl shadow-sm print:shadow-none overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 print:bg-gray-100 border-b">
-                <th className="text-right px-4 py-3 font-semibold text-gray-700">תאריך</th>
-                <th className="text-right px-4 py-3 font-semibold text-gray-700">שעות</th>
-                <th className="text-right px-4 py-3 font-semibold text-gray-700">שעון</th>
-                <th className="text-right px-4 py-3 font-semibold text-gray-700">תיאור</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-700">סכום</th>
-              </tr>
-            </thead>
-            <tbody>
-              {hoursEntries.map((entry, i) => {
-                const { timeRange, rest } = extractTimeRange(entry.description);
-                return (
-                  <tr key={entry.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
-                    <td className="px-4 py-2.5 text-gray-700 whitespace-nowrap">{formatDate(entry.entry_date)}</td>
-                    <td className="px-4 py-2.5 text-gray-700 font-medium">{entry.hours}</td>
-                    <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap">{timeRange ?? '—'}</td>
-                    <td className="px-4 py-2.5 text-gray-600">{rest || '—'}</td>
-                    <td className="px-4 py-2.5 text-gray-800 font-medium text-left">₪{entry.amount.toLocaleString()}</td>
+          {!pdfMode ? (
+            /* Screen / regular print table — full columns including amount */
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 print:bg-gray-100 border-b">
+                  <th className="text-right px-4 py-3 font-semibold text-gray-700">תאריך</th>
+                  <th className="text-right px-4 py-3 font-semibold text-gray-700">שעות</th>
+                  <th className="text-right px-4 py-3 font-semibold text-gray-700">שעון</th>
+                  <th className="text-right px-4 py-3 font-semibold text-gray-700">תיאור</th>
+                  <th className="text-left px-4 py-3 font-semibold text-gray-700">סכום</th>
+                </tr>
+              </thead>
+              <tbody>
+                {hoursEntries.map((entry, i) => {
+                  const { timeRange, rest } = extractTimeRange(entry.description);
+                  return (
+                    <tr key={entry.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                      <td className="px-4 py-2.5 text-gray-700 whitespace-nowrap">{formatDate(entry.entry_date)}</td>
+                      <td className="px-4 py-2.5 text-gray-700 font-medium">{entry.hours}</td>
+                      <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap">{timeRange ?? '—'}</td>
+                      <td className="px-4 py-2.5 text-gray-600">{rest || '—'}</td>
+                      <td className="px-4 py-2.5 text-gray-800 font-medium text-left">₪{entry.amount.toLocaleString()}</td>
+                    </tr>
+                  );
+                })}
+                {hoursEntries.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-gray-400">אין רשומות שעות לתקופה זו</td>
                   </tr>
-                );
-              })}
-              {hoursEntries.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-400">אין רשומות שעות לתקופה זו</td>
-                </tr>
+                )}
+              </tbody>
+              {hoursEntries.length > 0 && (
+                <tfoot>
+                  <tr className="border-t-2 border-gray-300 font-bold">
+                    <td className="px-4 py-3 text-gray-800">סה&quot;כ</td>
+                    <td className="px-4 py-3 text-gray-800">{totalHours} שעות</td>
+                    <td /><td />
+                    <td className="px-4 py-3 text-gray-800 text-left">₪{totalAmount.toLocaleString()}</td>
+                  </tr>
+                </tfoot>
               )}
-            </tbody>
-            {hoursEntries.length > 0 && (
-              <tfoot>
-                <tr className="border-t-2 border-gray-300 font-bold">
-                  <td className="px-4 py-3 text-gray-800">סה&quot;כ</td>
-                  <td className="px-4 py-3 text-gray-800">{totalHours} שעות</td>
-                  <td />
-                  <td />
-                  <td className="px-4 py-3 text-gray-800 text-left">₪{totalAmount.toLocaleString()}</td>
+            </table>
+          ) : (
+            /* PDF-only table — no prices, split time columns */
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 print:bg-gray-100 border-b">
+                  <th className="text-right px-4 py-3 font-semibold text-gray-700">תאריך</th>
+                  <th className="text-right px-4 py-3 font-semibold text-gray-700">משעה</th>
+                  <th className="text-right px-4 py-3 font-semibold text-gray-700">עד שעה</th>
+                  <th className="text-right px-4 py-3 font-semibold text-gray-700">שעות</th>
+                  <th className="text-right px-4 py-3 font-semibold text-gray-700">הערות</th>
                 </tr>
-              </tfoot>
-            )}
-          </table>
+              </thead>
+              <tbody>
+                {hoursEntries.map((entry, i) => {
+                  const { timeRange, rest } = extractTimeRange(entry.description);
+                  const { from, to } = splitTimeRange(timeRange);
+                  return (
+                    <tr key={entry.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                      <td className="px-4 py-2.5 text-gray-700 whitespace-nowrap">{formatDate(entry.entry_date)}</td>
+                      <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap">{from}</td>
+                      <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap">{to}</td>
+                      <td className="px-4 py-2.5 text-gray-700 font-medium">{entry.hours}</td>
+                      <td className="px-4 py-2.5 text-gray-600">{rest || '—'}</td>
+                    </tr>
+                  );
+                })}
+                {hoursEntries.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-gray-400">אין רשומות שעות לתקופה זו</td>
+                  </tr>
+                )}
+              </tbody>
+              {hoursEntries.length > 0 && (
+                <tfoot>
+                  <tr className="border-t-2 border-gray-300 font-bold">
+                    <td className="px-4 py-3 text-gray-800">סה&quot;כ</td>
+                    <td /><td />
+                    <td className="px-4 py-3 text-gray-800">{totalHours} שעות</td>
+                    <td />
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          )}
         </div>
 
         {/* Footer note */}

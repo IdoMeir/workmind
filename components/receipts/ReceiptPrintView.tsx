@@ -1,5 +1,8 @@
 'use client';
 
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Trash2 } from 'lucide-react';
 import { formatCurrency, formatHebrewDate } from '@/lib/hebrew-format';
 import type { Receipt } from '@/types';
 
@@ -13,6 +16,27 @@ interface Props {
 }
 
 export default function ReceiptPrintView({ receipt }: Props) {
+  const router = useRouter();
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  async function handleDelete() {
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      const res = await fetch(`/api/receipts/${receipt.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json();
+        setDeleteError(data.error || 'שגיאה במחיקה');
+        return;
+      }
+      router.push('/receipts');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   const periodStr = `${HEBREW_MONTHS[receipt.period_month - 1]} ${receipt.period_year}`;
 
   return (
@@ -105,7 +129,7 @@ export default function ReceiptPrintView({ receipt }: Props) {
         עוסק פטור — פטור מניכוי מע&quot;מ
       </div>
 
-      {/* Print button — hidden in print */}
+      {/* Actions — hidden in print */}
       <div className="mt-6 flex gap-3 no-print">
         <button
           onClick={() => window.print()}
@@ -119,7 +143,46 @@ export default function ReceiptPrintView({ receipt }: Props) {
         >
           חזרה
         </button>
+        <button
+          onClick={() => setShowConfirm(true)}
+          className="px-4 py-2.5 border border-red-200 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+          title="מחק קבלה"
+        >
+          <Trash2 size={18} />
+        </button>
       </div>
+
+      {/* Delete confirm dialog */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowConfirm(false)} />
+          <div className="relative bg-white rounded-2xl p-6 shadow-xl max-w-sm w-full">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">מחיקת קבלה</h3>
+            <p className="text-sm text-gray-600 mb-1">
+              האם למחוק את קבלה מס&apos; <span className="font-mono font-medium">{receipt.receipt_number}</span>?
+            </p>
+            <p className="text-sm text-gray-500 mb-5">
+              הרשומות שהיו מקושרות לקבלה זו יחזרו להיות זמינות להפקה מחדש.
+            </p>
+            {deleteError && <p className="text-red-600 text-sm mb-3">{deleteError}</p>}
+            <div className="flex gap-3">
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 bg-red-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
+              >
+                {deleting ? 'מוחק...' : 'מחק קבלה'}
+              </button>
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="flex-1 border border-gray-300 rounded-lg py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                ביטול
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
