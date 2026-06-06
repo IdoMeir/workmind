@@ -4,11 +4,11 @@ import { getDateRange } from '@/lib/hebrew-format';
 import HoursReportView from '@/components/reports/HoursReportView';
 
 interface Props {
-  searchParams: Promise<{ year?: string; month?: string; client_id?: string }>;
+  searchParams: Promise<{ year?: string; month?: string; client_id?: string; print?: string }>;
 }
 
 export default async function HoursReportPage({ searchParams }: Props) {
-  const { year: yearStr, month: monthStr, client_id } = await searchParams;
+  const { year: yearStr, month: monthStr, client_id, print } = await searchParams;
 
   const year = parseInt(yearStr ?? '') || new Date().getFullYear();
   const month = parseInt(monthStr ?? '') || new Date().getMonth() + 1;
@@ -44,6 +44,7 @@ export default async function HoursReportPage({ searchParams }: Props) {
       client={clientData}
       year={year}
       month={month}
+      printMode={print === 'true'}
     />
   );
 }
