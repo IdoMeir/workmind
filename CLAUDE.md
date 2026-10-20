@@ -2,6 +2,10 @@
 
 
 
+\> \*\*⚠️ המפרט המחייב מעכשיו: `docs/WORKMIND_V2_SPEC.md`.\*\* בכל סתירה בינו לבין הקובץ הזה — המפרט גובר. רשימת ה-NEVER בסעיף 13 שלו היא מקור האילוצים (במקום `~/.claude/CONSTRAINTS.md`). סדר הבנייה של v2 נמצא בסעיף 9 שלו, והוא מחליף את ה-Phases בקובץ הזה. מיגרציות נכתבות כקבצים ב-`supabase/migrations/`.
+
+
+
 \## סקירה כללית
 
 
@@ -52,7 +56,7 @@ WorkMind משתמשת בפרויקט Supabase הקיים של StudyMind (`euoomv
 
 |---|---|---|
 
-| Framework | Next.js 15 App Router, TypeScript | strict mode |
+| Framework | Next.js 16 App Router, TypeScript | strict mode. ה-middleware נקרא `proxy.ts` (מוסכמת Next 16) |
 
 | UI | Tailwind CSS + shadcn/ui | RTL via `dir="rtl"` on html |
 
@@ -2580,7 +2584,7 @@ Card: פירוט המס
 
 \- `/app/manifest.ts` — PWA manifest
 
-\- `/middleware.ts` — Auth redirect (זהה ל-StudyMind)
+\- `/proxy.ts` — Auth redirect (זהה ל-StudyMind; ב-Next 16 מחליף את `middleware.ts`)
 
 \- `/lib/supabase/client.ts`, `/lib/supabase/server.ts`
 
@@ -2844,7 +2848,7 @@ Card: פירוט המס
 
 
 
-\- `/middleware.ts` — רק auth redirect, כמו ב-StudyMind
+\- `/proxy.ts` — רק auth redirect, כמו ב-StudyMind
 
 \- `/lib/supabase/\*` — סטנדרט Supabase Next.js
 

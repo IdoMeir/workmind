@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { formatCurrency } from '@/lib/hebrew-format';
+import { buildMonthlySummary } from '@/lib/calculations';
 import type { ClientMonthlySummary } from '@/types';
 
 interface LineItemDisplay {
@@ -36,26 +37,34 @@ export default function GenerateReceiptDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Only entries not yet linked to a receipt may be billed. The monthly summary
+  // includes already-billed entries, so rebuild it from the unbilled ones.
+  const billable = buildMonthlySummary(
+    clientSummary.entries.filter(e => !e.receipt_id),
+    year,
+    month
+  ).byClient[0];
+  const billableHours = billable?.totalHours ?? 0;
+  const billableEvents = billable?.entries.filter(e => e.entry_type === 'event') ?? [];
+
   // Build editable line items
   const initialItems: LineItemDisplay[] = [];
-  if (clientSummary.totalHours > 0 && hourlyRate) {
+  if (billableHours > 0 && hourlyRate) {
     initialItems.push({
-      description: `שעות עבודה — ${clientSummary.totalHours} שעות`,
-      total: clientSummary.hoursAmount,
+      description: `שעות עבודה — ${billableHours} שעות`,
+      total: billable!.hoursAmount,
       isEditable: false,
       index: initialItems.length,
     });
   }
-  for (const entry of clientSummary.entries) {
-    if (entry.entry_type === 'event') {
-      initialItems.push({
-        description: entry.event_name || 'אירוע',
-        total: entry.amount,
-        eventName: entry.event_name || undefined,
-        isEditable: true,
-        index: initialItems.length,
-      });
-    }
+  for (const entry of billableEvents) {
+    initialItems.push({
+      description: entry.event_name || 'אירוע',
+      total: entry.amount,
+      eventName: entry.event_name || undefined,
+      isEditable: true,
+      index: initialItems.length,
+    });
   }
 
   const [items, setItems] = useState<LineItemDisplay[]>(initialItems);
@@ -98,14 +107,14 @@ export default function GenerateReceiptDialog({
             // hours line
             result.push({
               description: item.description,
-              quantity: clientSummary.totalHours,
+              quantity: billableHours,
               unit_price: hourlyRate!,
               total: item.total,
             });
             hoursIdx++;
           } else {
             // event lines
-            const entry = clientSummary.entries.filter(e => e.entry_type === 'event')[eventIdx];
+            const entry = billableEvents[eventIdx];
             result.push({
               description: item.description,
               quantity: 1,
@@ -215,6 +224,12 @@ export default function GenerateReceiptDialog({
             />
           </div>
 
+          {items.length === 0 && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-lg px-3 py-2">
+              כל הרשומות של הלקוח בחודש זה כבר נכללו בקבלה
+            </div>
+          )}
+
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">
               {error}
@@ -224,7 +239,7 @@ export default function GenerateReceiptDialog({
           <div className="flex gap-3 pt-1">
             <button
               onClick={handleGenerate}
-              disabled={loading}
+              disabled={loading || items.length === 0}
               className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
             >
               {loading ? 'מפיק...' : 'הפק קבלה'}

@@ -70,6 +70,16 @@ export async function POST(request: NextRequest) {
   const lineItems = custom_line_items ?? buildLineItemsFromSummary(clientSummary, client.hourly_rate);
   const totalAmount = lineItems.reduce((s, item) => s + item.total, 0);
 
+  // The receipt must cover exactly the entries it will be linked to — no more, no less.
+  // Compare in agorot to avoid floating-point drift.
+  const entriesTotal = entries.reduce((s, e) => s + Number(e.amount), 0);
+  if (Math.round(totalAmount * 100) !== Math.round(entriesTotal * 100)) {
+    return NextResponse.json(
+      { error: 'סכום שורות הקבלה אינו תואם לסכום הרשומות שטרם נכללו בקבלה. רענן את המסך ונסה שוב.' },
+      { status: 400 }
+    );
+  }
+
   // Generate receipt number (increments counter atomically)
   let receiptNumber: string;
   try {
