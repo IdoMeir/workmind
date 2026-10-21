@@ -30,8 +30,9 @@
 }
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: var(--color-ink);
+  --foreground: var(--color-text);
+  color-scheme: dark;
 }
 
 html {

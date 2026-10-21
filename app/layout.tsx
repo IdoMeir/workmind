@@ -4,11 +4,11 @@ import ServiceWorkerRegistrar from '@/components/shared/ServiceWorkerRegistrar';
 
 export const metadata: Metadata = {
   title: 'WorkMind',
-  description: 'ניהול עבודה לפרילנסר',
+  description: 'שכר ועסק: רישום, חודש, מס ופעולות',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
+    statusBarStyle: 'black',
     title: 'WorkMind',
   },
   icons: {
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#2563eb',
+  themeColor: '#12201F',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

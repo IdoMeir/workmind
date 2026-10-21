@@ -6,6 +6,7 @@ import Money from '@/components/shared/Money';
 import { addDays, computeWeek, regularDayTemplate, shiftPay, weekStart } from '@/lib/payroll/overtime';
 import { toRules } from '@/lib/payroll/employer';
 import { formatDayAndDate, formatDecimal, formatHours, todayISO } from '@/lib/hebrew-format';
+import { track } from '@/lib/events';
 import type { Employer, Shift } from '@/types';
 
 interface ShiftDialogProps {
@@ -97,6 +98,7 @@ export default function ShiftDialog({ open, onClose, onSaved, onDeleted, employe
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'שגיאה בשמירה'); return; }
+      track('entry_saved', { kind: 'shift', edit: !!shift });
       onSaved(data);
       onClose();
     } catch {

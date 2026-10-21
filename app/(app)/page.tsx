@@ -15,6 +15,7 @@ import { buildTaxTasks, nextDeadlineTask } from '@/lib/tax/tasks';
 import { businessActivity } from '@/lib/tax/status';
 import { SELF_STATUS_WINDOW_DAYS } from '@/lib/tax/constants-2026';
 import { addDays } from '@/lib/payroll/overtime';
+import { track } from '@/lib/events';
 
 interface TodayData {
   settings: UserSettings | null;
@@ -120,6 +121,7 @@ export default function TodayPage() {
     if (!lastShift || !data?.employer) return;
     setDuplicating('shift');
     setError('');
+    track('like_yesterday', { kind: 'shift' });
     try {
       const res = await fetch('/api/shifts', {
         method: 'POST',
@@ -144,6 +146,7 @@ export default function TodayPage() {
     if (!lastWork) return;
     setDuplicating('entry');
     setError('');
+    track('like_yesterday', { kind: 'work' });
     try {
       const res = await fetch('/api/entries', {
         method: 'POST',

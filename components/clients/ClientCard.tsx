@@ -1,7 +1,8 @@
 'use client';
 
-import { Client } from '@/types';
 import { Pencil, Trash2 } from 'lucide-react';
+import Money from '@/components/shared/Money';
+import type { Client } from '@/types';
 
 interface ClientCardProps {
   client: Client;
@@ -11,54 +12,39 @@ interface ClientCardProps {
 
 export default function ClientCard({ client, onEdit, onDelete }: ClientCardProps) {
   return (
-    <div className={`bg-white rounded-xl border p-4 ${!client.is_active ? 'opacity-60 border-gray-200' : 'border-gray-200'}`}>
+    <article className={`wm-card p-4 ${client.is_active ? '' : 'opacity-70'}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-semibold text-gray-900 text-base">{client.name}</h3>
+            <h3 className="wm-title text-[17px]">{client.name}</h3>
             {!client.is_active && (
-              <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-                לא פעיל
-              </span>
+              <span className="text-[13px] border border-rule text-text-mute px-2 rounded">לא פעיל</span>
             )}
           </div>
-          {client.description && (
-            <p className="text-sm text-gray-500 mt-0.5 truncate">{client.description}</p>
-          )}
-          <div className="flex flex-wrap gap-2 mt-2">
+          {client.description && <p className="text-[13px] text-text-mute mt-0.5 truncate">{client.description}</p>}
+          <div className="flex flex-wrap gap-2 mt-2 text-[13px]">
             {client.hourly_rate && (
-              <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded-lg font-medium">
-                ₪{client.hourly_rate.toLocaleString()}/שעה
-              </span>
+              <span className="border border-rule rounded px-2 py-0.5"><Money amount={Number(client.hourly_rate)} className="text-brass" /> לשעה</span>
             )}
             {client.event_rate && (
-              <span className="text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded-lg font-medium">
-                ₪{client.event_rate.toLocaleString()}/אירוע
-              </span>
+              <span className="border border-rule rounded px-2 py-0.5"><Money amount={Number(client.event_rate)} className="text-brass" /> לאירוע</span>
             )}
+            {client.rate_presets?.map(p => (
+              <span key={p.name} className="border border-rule rounded px-2 py-0.5">{p.name} <Money amount={p.rate} /></span>
+            ))}
           </div>
-          {client.contact_info && (
-            <p className="text-xs text-gray-400 mt-1.5">{client.contact_info}</p>
-          )}
+          {client.contact_info && <p className="text-[13px] text-text-mute mt-1.5">{client.contact_info}</p>}
         </div>
 
-        <div className="flex gap-1 shrink-0">
-          <button
-            onClick={() => onEdit(client)}
-            className="min-w-11 min-h-11 inline-flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-            aria-label="ערוך לקוח"
-          >
-            <Pencil size={16} />
+        <div className="flex shrink-0">
+          <button onClick={() => onEdit(client)} aria-label={`ערוך את ${client.name}`} className="wm-btn text-text-mute">
+            <Pencil size={18} aria-hidden="true" />
           </button>
-          <button
-            onClick={() => onDelete(client)}
-            className="min-w-11 min-h-11 inline-flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            aria-label="מחק לקוח"
-          >
-            <Trash2 size={16} />
+          <button onClick={() => onDelete(client)} aria-label={`מחק את ${client.name}`} className="wm-btn text-text-mute">
+            <Trash2 size={18} aria-hidden="true" />
           </button>
         </div>
       </div>
-    </div>
+    </article>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Sheet from '@/components/shared/Sheet';
 import Money from '@/components/shared/Money';
 import { PAYMENT_METHODS } from '@/lib/payments';
+import { track } from '@/lib/events';
 import { formatDecimal, formatShortDate, todayISO } from '@/lib/hebrew-format';
 import type { Client, Payment, PaymentMethod, WorkEntry } from '@/types';
 
@@ -101,6 +102,7 @@ export default function PaymentSheet({ open, onClose, onSaved, clients, preset }
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'שגיאה בשמירה'); return; }
+      track('entry_saved', { kind: 'payment', legacy_receipt: isLegacyReceipt });
       onSaved(data);
       onClose();
     } catch {

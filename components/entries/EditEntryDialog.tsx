@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { WorkEntry } from '@/types';
-import { X } from 'lucide-react';
+import type { WorkEntry } from '@/types';
+import Sheet from '@/components/shared/Sheet';
 
 interface EditEntryDialogProps {
   entry: WorkEntry | null;
@@ -66,12 +66,11 @@ export default function EditEntryDialog({ entry, onClose, onSave }: EditEntryDia
     }
   }, [timeFrom, timeTo]);
 
-  if (!entry) return null;
-  const entryId = entry.id;
-  const isHours = entry.entry_type === 'hours';
+  const isHours = entry?.entry_type === 'hours';
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(e?: React.FormEvent) {
+    e?.preventDefault();
+    if (!entry) return;
     setError('');
     setLoading(true);
 
@@ -90,7 +89,7 @@ export default function EditEntryDialog({ entry, onClose, onSave }: EditEntryDia
     else body.event_name = eventName.trim();
 
     try {
-      const res = await fetch(`/api/entries/${entryId}`, {
+      const res = await fetch(`/api/entries/${entry.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -99,111 +98,67 @@ export default function EditEntryDialog({ entry, onClose, onSave }: EditEntryDia
       if (!res.ok) { setError(data.error || 'שגיאה'); return; }
       onSave(data);
       onClose();
+    } catch {
+      setError('שגיאת רשת');
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center pb-above-nav">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl p-5 shadow-xl">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">עריכת רשומה</h2>
-          <button onClick={onClose} aria-label="סגור" className="min-w-11 min-h-11 inline-flex items-center justify-center text-gray-400 hover:text-gray-600"><X size={20} /></button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-3">
-          {isHours ? (
-            <>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">משעה</label>
-                  <input
-                    type="time"
-                    value={timeFrom}
-                    onChange={e => setTimeFrom(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">עד שעה</label>
-                  <input
-                    type="time"
-                    value={timeTo}
-                    onChange={e => setTimeTo(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+    <Sheet
+      open={entry !== null}
+      onClose={onClose}
+      title="עריכת רשומה"
+      subtitle={entry?.client?.name}
+      footer={
+        <button type="submit" form="edit-entry-form" disabled={loading} className="wm-btn wm-btn-brass w-full">
+          {loading ? 'שומר…' : 'שמור שינויים'}
+        </button>
+      }
+    >
+      <form id="edit-entry-form" onSubmit={handleSubmit} className="space-y-3">
+        {isHours ? (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="ed-from" className="wm-label">משעה</label>
+                <input id="ed-from" type="time" value={timeFrom} onChange={e => setTimeFrom(e.target.value)} className="wm-field" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">שעות</label>
-                <input
-                  type="number"
-                  min="0.25"
-                  max="24"
-                  step="0.25"
-                  value={hours}
-                  onChange={e => setHours(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <label htmlFor="ed-to" className="wm-label">עד שעה</label>
+                <input id="ed-to" type="time" value={timeTo} onChange={e => setTimeTo(e.target.value)} className="wm-field" />
               </div>
-            </>
-          ) : (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">שם האירוע</label>
-              <input
-                type="text"
-                value={eventName}
-                onChange={e => setEventName(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
             </div>
-          )}
-
+            <div>
+              <label htmlFor="ed-hours" className="wm-label">שעות</label>
+              <input id="ed-hours" type="number" inputMode="decimal" min="0.25" max="24" step="0.25" value={hours}
+                onChange={e => setHours(e.target.value)} className="wm-field" />
+            </div>
+          </>
+        ) : (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">סכום (₪)</label>
-            <input
-              type="number"
-              min="0"
-              step="1"
-              value={amount}
-              onChange={e => setAmount(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <label htmlFor="ed-event" className="wm-label">שם האירוע</label>
+            <input id="ed-event" type="text" value={eventName} onChange={e => setEventName(e.target.value)} className="wm-field" />
           </div>
+        )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">תאריך</label>
-            <input
-              type="date"
-              value={date}
-              onChange={e => setDate(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+        <div>
+          <label htmlFor="ed-amount" className="wm-label">סכום (₪)</label>
+          <input id="ed-amount" type="number" inputMode="decimal" min="0" step="1" value={amount}
+            onChange={e => setAmount(e.target.value)} className="wm-field" />
+        </div>
+        <div>
+          <label htmlFor="ed-date" className="wm-label">תאריך</label>
+          <input id="ed-date" type="date" value={date} onChange={e => setDate(e.target.value)} className="wm-field" />
+        </div>
+        <div>
+          <label htmlFor="ed-note" className="wm-label">הערה</label>
+          <input id="ed-note" type="text" value={description} onChange={e => setDescription(e.target.value)} className="wm-field" />
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">הערה</label>
-            <input
-              type="text"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          {error && <p className="text-red-600 text-sm">{error}</p>}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            {loading ? 'שומר...' : 'שמור שינויים'}
-          </button>
-        </form>
-      </div>
-    </div>
+        {error && <p role="alert" className="wm-error">{error}</p>}
+      </form>
+    </Sheet>
   );
 }

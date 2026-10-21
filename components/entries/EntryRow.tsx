@@ -1,8 +1,11 @@
 'use client';
 
-import { WorkEntry } from '@/types';
-import { formatCurrency, formatHebrewDate } from '@/lib/hebrew-format';
-import { Pencil, Trash2, Clock, CalendarDays, Receipt } from 'lucide-react';
+import { CalendarDays, Pencil, Trash2 } from 'lucide-react';
+import type { WorkEntry } from '@/types';
+import Money from '@/components/shared/Money';
+import { BusinessIcon } from '@/components/shared/SourceIcon';
+import { formatDecimal, formatHebrewDate } from '@/lib/hebrew-format';
+import { isOpenEntry } from '@/lib/payments';
 
 interface EntryRowProps {
   entry: WorkEntry;
@@ -12,56 +15,37 @@ interface EntryRowProps {
 
 export default function EntryRow({ entry, onEdit, onDelete }: EntryRowProps) {
   const isHours = entry.entry_type === 'hours';
-  const hasReceipt = !!entry.receipt_id;
+  const locked = !!entry.receipt_id;
+  const open = isOpenEntry(entry);
+  const label = isHours ? `${formatDecimal(Number(entry.hours))} שעות` : entry.event_name;
 
   return (
-    <div className={`flex items-start gap-3 py-3 border-b border-gray-50 last:border-0 ${hasReceipt ? 'opacity-70' : ''}`}>
-      <div className={`mt-0.5 p-1.5 rounded-lg shrink-0 ${isHours ? 'bg-blue-50 text-blue-500' : 'bg-purple-50 text-purple-500'}`}>
-        {isHours ? <Clock size={14} /> : <CalendarDays size={14} />}
-      </div>
+    <li className="flex items-center gap-3 py-2 border-b border-rule last:border-0">
+      {isHours ? <BusinessIcon /> : <CalendarDays size={16} aria-hidden="true" className="text-brass" />}
 
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline justify-between gap-2">
-          <p className="text-sm font-medium text-gray-900 truncate">
-            {isHours
-              ? `${entry.hours} שעות — ${entry.client?.name}`
-              : `${entry.event_name} — ${entry.client?.name}`}
-          </p>
-          <span className="text-sm font-semibold text-gray-900 shrink-0">
-            {formatCurrency(entry.amount)}
-          </span>
+          <p className="text-[15px] truncate">{label} — {entry.client?.name}</p>
+          <Money amount={Number(entry.amount)} className="wm-num shrink-0" />
         </div>
-        <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-xs text-gray-400">{formatHebrewDate(entry.entry_date)}</span>
-          {entry.description && (
-            <span className="text-xs text-gray-400 truncate">· {entry.description}</span>
-          )}
-          {hasReceipt && (
-            <span className="text-xs text-green-600 flex items-center gap-0.5">
-              <Receipt size={11} /> קבלה
-            </span>
-          )}
-        </div>
+        <p className="text-[13px] text-text-mute truncate">
+          {formatHebrewDate(entry.entry_date)}
+          {entry.description && ` · ${entry.description}`}
+          {locked && ' · בקבלה ישנה'}
+          {!locked && (open ? ' · פתוח' : ' · שולם')}
+        </p>
       </div>
 
-      {!hasReceipt && (
-        <div className="flex gap-0.5 shrink-0">
-          <button
-            onClick={() => onEdit(entry)}
-            aria-label="ערוך רשומה"
-            className="min-w-11 min-h-11 inline-flex items-center justify-center text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-          >
-            <Pencil size={14} />
+      {!locked && (
+        <div className="flex shrink-0">
+          <button onClick={() => onEdit(entry)} aria-label={`ערוך ${label}`} className="wm-btn text-text-mute">
+            <Pencil size={16} aria-hidden="true" />
           </button>
-          <button
-            onClick={() => onDelete(entry)}
-            aria-label="מחק רשומה"
-            className="min-w-11 min-h-11 inline-flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-          >
-            <Trash2 size={14} />
+          <button onClick={() => onDelete(entry)} aria-label={`מחק ${label}`} className="wm-btn text-text-mute">
+            <Trash2 size={16} aria-hidden="true" />
           </button>
         </div>
       )}
-    </div>
+    </li>
   );
 }

@@ -30,58 +30,60 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 w-full max-w-sm p-6">
+    <div className="min-h-screen bg-ink text-text flex items-center justify-center p-4">
+      <div className="wm-card w-full max-w-sm p-6">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">WorkMind</h1>
-          <p className="text-gray-500 text-sm mt-1">ניהול עבודה לפרילנסר</p>
+          <h1 className="wm-title text-[24px]">WorkMind</h1>
+          <p className="text-text-mute text-[15px] mt-1">ניהול עבודה לפרילנסר</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="login-f1" className="wm-label">
               אימייל
             </label>
             <input
+              id="login-f1"
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="wm-field"
               placeholder="you@example.com"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="login-f2" className="wm-label">
               סיסמה
             </label>
             <input
+              id="login-f2"
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="wm-field"
               placeholder="••••••••"
             />
           </div>
 
           {error && (
-            <p className="text-red-600 text-sm text-center">{error}</p>
+            <p role="alert" className="wm-error text-center">{error}</p>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="wm-btn wm-btn-brass w-full"
           >
             {loading ? 'מתחבר...' : 'התחברות'}
           </button>
         </form>
 
-        <p className="text-center text-sm text-gray-500 mt-4">
+        <p className="text-center text-[15px] text-text-mute mt-4">
           אין לך חשבון?{' '}
-          <Link href="/register" className="text-blue-600 hover:underline">
+          <Link href="/register" className="text-brass underline inline-flex items-center min-h-11">
             הרשמה
           </Link>
         </p>

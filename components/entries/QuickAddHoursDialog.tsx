@@ -5,6 +5,7 @@ import { Client, WorkEntry, RatePreset } from '@/types';
 import { todayISO } from '@/lib/hebrew-format';
 import Sheet from '@/components/shared/Sheet';
 import Money from '@/components/shared/Money';
+import { track } from '@/lib/events';
 
 interface QuickAddHoursDialogProps {
   open: boolean;
@@ -128,6 +129,7 @@ export default function QuickAddHoursDialog({ open, onClose, onAdd, clients, def
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'שגיאה'); return; }
+      track('entry_saved', { kind: 'work' });
       onAdd(data);
       onClose();
     } catch {

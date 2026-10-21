@@ -141,3 +141,9 @@ export const paymentSchema = z.object({
   /** עבודות פתוחות שהתקבול משלם עליהן. */
   entry_ids: z.array(z.string().uuid()).default([]),
 });
+
+// אירועי שימוש: רק שם מהרשימה ותוויות קצרות. אין מספרים, ולכן אין סכומים.
+export const eventSchema = z.object({
+  name: z.enum(['screen_open', 'entry_saved', 'like_yesterday', 'how_calculated_open']),
+  props: z.record(z.string().max(40), z.union([z.string().max(60), z.boolean()])).nullable().optional(),
+});

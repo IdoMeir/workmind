@@ -65,15 +65,25 @@ export async function POST(request: NextRequest) {
     : undefined;
 
   // Generate AI analysis
-  const content = await generateMonthlyAnalysis({
-    year,
-    month,
-    totalAmount: monthlySummary.totalAmount,
-    byClient: monthlySummary.byClient,
-    yearTotalSoFar: progress.yearTotal,
-    ceiling: OSEK_PATUR_CEILING_2026,
-    previousMonthTotal,
-  });
+  let content: string;
+  try {
+    content = await generateMonthlyAnalysis({
+      year,
+      month,
+      totalAmount: monthlySummary.totalAmount,
+      byClient: monthlySummary.byClient,
+      yearTotalSoFar: progress.yearTotal,
+      ceiling: OSEK_PATUR_CEILING_2026,
+      previousMonthTotal,
+    });
+  } catch {
+    return NextResponse.json({ error: 'יצירת הניתוח נכשלה. נסה שוב.' }, { status: 502 });
+  }
+
+  // תוצאה ריקה או כושלת לא נשמרת ב-cache (NEVER #4).
+  if (!content.trim()) {
+    return NextResponse.json({ error: 'הניתוח חזר ריק. נסה שוב.' }, { status: 502 });
+  }
 
   // Save to cache
   const { data: insight, error } = await supabase

@@ -1,43 +1,45 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { WorkEntry, Client } from '@/types';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import type { WorkEntry, Client } from '@/types';
 import PageHeader from '@/components/shared/PageHeader';
+import Sheet from '@/components/shared/Sheet';
+import Money from '@/components/shared/Money';
 import EntriesList from '@/components/entries/EntriesList';
 import EditEntryDialog from '@/components/entries/EditEntryDialog';
 import QuickAddHoursDialog from '@/components/entries/QuickAddHoursDialog';
 import QuickAddEventDialog from '@/components/entries/QuickAddEventDialog';
-import { formatCurrency, formatHebrewMonth, getCurrentMonthYear } from '@/lib/hebrew-format';
-import { Plus, ChevronRight, ChevronLeft } from 'lucide-react';
+import { formatHebrewDate, formatHebrewMonthYear, getCurrentMonthYear } from '@/lib/hebrew-format';
 
 export default function EntriesPage() {
   const now = getCurrentMonthYear();
   const [year, setYear] = useState(now.year);
   const [month, setMonth] = useState(now.month);
-  const [entries, setEntries] = useState<WorkEntry[]>([]);
+  const [entries, setEntries] = useState<WorkEntry[] | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
   const [editEntry, setEditEntry] = useState<WorkEntry | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<WorkEntry | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const [showHours, setShowHours] = useState(false);
   const [showEvent, setShowEvent] = useState(false);
 
   const fetchEntries = useCallback(async () => {
-    setLoading(true);
+    setEntries(null);
     try {
       const res = await fetch(`/api/entries?year=${year}&month=${month}`);
       const data = await res.json();
       setEntries(Array.isArray(data) ? data : []);
-    } finally {
-      setLoading(false);
+    } catch {
+      setEntries([]);
     }
   }, [year, month]);
 
   useEffect(() => { fetchEntries(); }, [fetchEntries]);
 
   useEffect(() => {
-    fetch('/api/clients').then(r => r.json()).then(d => setClients(Array.isArray(d) ? d : []));
+    fetch('/api/clients').then(r => r.json()).then(d => setClients(Array.isArray(d) ? d : [])).catch(() => setClients([]));
   }, []);
 
   function prevMonth() {
@@ -49,135 +51,89 @@ export default function EntriesPage() {
     else setMonth(m => m + 1);
   }
 
-  function handleSave(updated: WorkEntry) {
-    setEntries(prev => prev.map(e => e.id === updated.id ? updated : e));
-  }
-
-  function handleAdded(entry: WorkEntry) {
-    // Re-fetch to get the right date ordering
-    fetchEntries();
-  }
-
   async function handleDeleteConfirm() {
     if (!deleteConfirm) return;
     setDeleteLoading(true);
+    setDeleteError('');
     try {
       const res = await fetch(`/api/entries/${deleteConfirm.id}`, { method: 'DELETE' });
       const data = await res.json();
-      if (res.ok) {
-        setEntries(prev => prev.filter(e => e.id !== deleteConfirm.id));
-        setDeleteConfirm(null);
-      } else {
-        alert(data.error || 'שגיאה במחיקה');
-      }
+      if (!res.ok) { setDeleteError(data.error || 'שגיאה במחיקה'); return; }
+      setEntries(prev => (prev ?? []).filter(e => e.id !== deleteConfirm.id));
+      setDeleteConfirm(null);
     } finally {
       setDeleteLoading(false);
     }
   }
 
-  const monthTotal = entries.reduce((s, e) => s + e.amount, 0);
+  const monthTotal = (entries ?? []).reduce((s, e) => s + Number(e.amount), 0);
 
   return (
     <>
       <PageHeader
-        title="רשומות עבודה"
+        title="רשומות העסק"
+        backHref="/more"
         action={
-          <div className="flex gap-1.5">
-            <button
-              onClick={() => setShowHours(true)}
-              className="bg-blue-600 text-white px-2.5 py-2 rounded-lg text-xs font-medium hover:bg-blue-700"
-            >
-              <Plus size={14} className="inline ml-0.5" />שעות
+          <div className="flex gap-1">
+            <button onClick={() => setShowHours(true)} className="wm-btn wm-btn-brass px-3">
+              <Plus size={16} aria-hidden="true" /> שעות
             </button>
-            <button
-              onClick={() => setShowEvent(true)}
-              className="bg-purple-600 text-white px-2.5 py-2 rounded-lg text-xs font-medium hover:bg-purple-700"
-            >
-              <Plus size={14} className="inline ml-0.5" />אירוע
+            <button onClick={() => setShowEvent(true)} className="wm-btn wm-btn-ghost px-3">
+              <Plus size={16} aria-hidden="true" /> אירוע
             </button>
           </div>
         }
       />
 
-      {/* Month navigator */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
-        <button onClick={nextMonth} aria-label="החודש הבא" className="min-w-11 min-h-11 inline-flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500">
-          <ChevronRight size={18} />
+      <div className="flex items-center justify-between px-2 py-2 border-b border-rule">
+        <button onClick={prevMonth} aria-label="החודש הקודם" className="wm-btn text-text-mute">
+          <ChevronRight size={20} aria-hidden="true" />
         </button>
         <div className="text-center">
-          <p className="text-sm font-semibold text-gray-900">
-            {formatHebrewMonth(month)} {year}
-          </p>
-          {!loading && (
-            <p className="text-xs text-gray-400">{formatCurrency(monthTotal)}</p>
-          )}
+          <p className="wm-title text-[17px]">{formatHebrewMonthYear(month, year)}</p>
+          {entries && <p className="text-[13px] text-text-mute"><Money amount={monthTotal} /></p>}
         </div>
-        <button onClick={prevMonth} aria-label="החודש הקודם" className="min-w-11 min-h-11 inline-flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500">
-          <ChevronLeft size={18} />
+        <button onClick={nextMonth} aria-label="החודש הבא" className="wm-btn text-text-mute">
+          <ChevronLeft size={20} aria-hidden="true" />
         </button>
       </div>
 
-      {loading ? (
-        <div className="p-4 space-y-2">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="h-14 bg-white rounded-lg border border-gray-100 animate-pulse" />
-          ))}
-        </div>
-      ) : (
-        <div className="pt-2">
-          <EntriesList
-            entries={entries}
-            onEdit={setEditEntry}
-            onDelete={setDeleteConfirm}
-          />
-        </div>
-      )}
+      <div className="pt-3">
+        {entries === null ? (
+          <div className="px-4 space-y-2" aria-busy="true" aria-label="טוען">
+            {[1, 2, 3, 4].map(i => <div key={i} className="wm-card h-14 animate-pulse" />)}
+          </div>
+        ) : (
+          <EntriesList entries={entries} onEdit={setEditEntry} onDelete={e => { setDeleteError(''); setDeleteConfirm(e); }} />
+        )}
+      </div>
 
       <EditEntryDialog
         entry={editEntry}
         onClose={() => setEditEntry(null)}
-        onSave={handleSave}
+        onSave={updated => setEntries(prev => (prev ?? []).map(e => (e.id === updated.id ? updated : e)))}
       />
+      <QuickAddHoursDialog open={showHours} onClose={() => setShowHours(false)} onAdd={() => fetchEntries()} clients={clients} />
+      <QuickAddEventDialog open={showEvent} onClose={() => setShowEvent(false)} onAdd={() => fetchEntries()} clients={clients} />
 
-      <QuickAddHoursDialog
-        open={showHours}
-        onClose={() => setShowHours(false)}
-        onAdd={handleAdded}
-        clients={clients}
-      />
-      <QuickAddEventDialog
-        open={showEvent}
-        onClose={() => setShowEvent(false)}
-        onAdd={handleAdded}
-        clients={clients}
-      />
-
-      {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setDeleteConfirm(null)} />
-          <div className="relative bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl">
-            <h3 className="font-semibold text-gray-900 mb-2">מחיקת רשומה</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              למחוק את הרשומה ב-{deleteConfirm.entry_date}?
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                className="flex-1 border border-gray-300 text-gray-700 rounded-lg py-2.5 text-sm font-medium"
-              >
-                ביטול
-              </button>
-              <button
-                onClick={handleDeleteConfirm}
-                disabled={deleteLoading}
-                className="flex-1 bg-red-600 text-white rounded-lg py-2.5 text-sm font-medium disabled:opacity-50"
-              >
-                {deleteLoading ? 'מוחק...' : 'מחק'}
-              </button>
-            </div>
+      <Sheet
+        open={deleteConfirm !== null}
+        onClose={() => setDeleteConfirm(null)}
+        title="מחיקת רשומה"
+        footer={
+          <div className="flex gap-2">
+            <button onClick={() => setDeleteConfirm(null)} className="wm-btn wm-btn-ghost flex-1">ביטול</button>
+            <button onClick={handleDeleteConfirm} disabled={deleteLoading} className="wm-btn wm-btn-danger flex-1">
+              {deleteLoading ? 'מוחק…' : 'מחק'}
+            </button>
           </div>
-        </div>
-      )}
+        }
+      >
+        <p className="text-[15px]">
+          למחוק את הרשומה מ-{deleteConfirm ? formatHebrewDate(deleteConfirm.entry_date) : ''}?
+        </p>
+        {deleteError && <p role="alert" className="wm-error">{deleteError}</p>}
+      </Sheet>
     </>
   );
 }

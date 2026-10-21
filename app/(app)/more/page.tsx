@@ -1,9 +1,21 @@
 import Link from 'next/link';
-import { ChevronLeft, FileText, List, Settings, Users } from 'lucide-react';
+import { ChevronLeft, Download, FileText, List, Settings, Sparkles, Users } from 'lucide-react';
 import PageHeader from '@/components/shared/PageHeader';
 import { BusinessIcon, SalaryIcon } from '@/components/shared/SourceIcon';
+import AddEventButton from '@/components/more/AddEventButton';
 
-const SECTIONS: { title: string; items: { href: string; label: string; hint?: string; icon: React.ReactNode }[] }[] = [
+interface Item {
+  href: string;
+  label: string;
+  hint?: string;
+  icon: React.ReactNode;
+  /** קישור להורדה (לא ניווט בתוך האפליקציה). */
+  download?: boolean;
+}
+
+const year = new Date().getFullYear();
+
+const SECTIONS: { title: string; items: Item[]; extra?: React.ReactNode }[] = [
   {
     title: 'עבודה',
     items: [
@@ -11,20 +23,42 @@ const SECTIONS: { title: string; items: { href: string; label: string; hint?: st
       { href: '/clients', label: 'לקוחות', hint: 'תעריפים ללקוחות העסק', icon: <Users size={20} aria-hidden="true" className="text-brass" /> },
       { href: '/entries', label: 'כל הרשומות של העסק', icon: <List size={20} aria-hidden="true" className="text-brass" /> },
     ],
+    extra: <AddEventButton />,
   },
   {
     title: 'מסמכים',
     items: [
       { href: '/receipts', label: 'קבלות שהוצאו', hint: 'לצפייה בלבד', icon: <FileText size={20} aria-hidden="true" className="text-brass" /> },
+      { href: `/api/export?year=${year}`, label: `ייצוא ${year}`, hint: 'משמרות, עבודות ותקבולים (CSV)', icon: <Download size={20} aria-hidden="true" className="text-text-mute" />, download: true },
+      { href: '/insights', label: 'ניתוח חודשי (AI)', hint: 'החודש הקודם', icon: <Sparkles size={20} aria-hidden="true" className="text-text-mute" /> },
     ],
   },
   {
     title: 'חשבון',
     items: [
-      { href: '/settings', label: 'הגדרות', hint: 'פרטים אישיים, נקודות זיכוי, ישוב', icon: <Settings size={20} aria-hidden="true" className="text-text-mute" /> },
+      { href: '/settings', label: 'הגדרות', hint: 'פרטים אישיים, נקודות זיכוי, ישוב, מסלול', icon: <Settings size={20} aria-hidden="true" className="text-text-mute" /> },
     ],
   },
 ];
+
+function Row({ item }: { item: Item }) {
+  const content = (
+    <>
+      {item.icon}
+      <span className="flex-1">
+        <span className="block text-[15px] text-text">{item.label}</span>
+        {item.hint && <span className="block text-[13px] text-text-mute">{item.hint}</span>}
+      </span>
+      <ChevronLeft size={18} aria-hidden="true" className="text-text-faint" />
+    </>
+  );
+  const cls = 'flex items-center gap-3 px-4 min-h-14 py-2';
+  return item.download ? (
+    <a href={item.href} download className={cls}>{content}</a>
+  ) : (
+    <Link href={item.href} className={cls}>{content}</Link>
+  );
+}
 
 export default function MorePage() {
   return (
@@ -35,18 +69,8 @@ export default function MorePage() {
           <section key={section.title} aria-labelledby={`more-${section.title}`}>
             <h2 id={`more-${section.title}`} className="text-[13px] text-text-mute mb-2">{section.title}</h2>
             <ul className="wm-card divide-y divide-rule">
-              {section.items.map(item => (
-                <li key={item.href}>
-                  <Link href={item.href} className="flex items-center gap-3 px-4 min-h-14 py-2">
-                    {item.icon}
-                    <span className="flex-1">
-                      <span className="block text-[15px] text-text">{item.label}</span>
-                      {item.hint && <span className="block text-[13px] text-text-mute">{item.hint}</span>}
-                    </span>
-                    <ChevronLeft size={18} aria-hidden="true" className="text-text-faint" />
-                  </Link>
-                </li>
-              ))}
+              {section.items.map(item => <li key={item.href}><Row item={item} /></li>)}
+              {section.extra && <li>{section.extra}</li>}
             </ul>
           </section>
         ))}

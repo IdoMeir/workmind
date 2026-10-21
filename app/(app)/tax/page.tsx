@@ -20,6 +20,7 @@ import { estimateMonthlyGross, projectMonthlySalaries } from '@/lib/payroll/sala
 import { expectedMonthGross } from '@/lib/payroll/payslip';
 import { toRules } from '@/lib/payroll/employer';
 import { formatDecimal, formatShortDate, todayISO } from '@/lib/hebrew-format';
+import { track } from '@/lib/events';
 import type { Employer, Payment, Payslip, Shift, UserSettings } from '@/types';
 
 const DISCLAIMER = '* זהו חישוב הערכה בלבד. הנתונים מבוססים על מדרגות המס לשנת 2026. מומלץ להיוועץ ברואה חשבון לחישוב מדויק.';
@@ -264,7 +265,11 @@ export default function TaxPage() {
         </section>
 
         {/* ─── איך זה מחושב ─── */}
-        <details className="wm-card group" id="how-calculated">
+        <details
+          className="wm-card group"
+          id="how-calculated"
+          onToggle={e => { if ((e.currentTarget as HTMLDetailsElement).open) track('how_calculated_open'); }}
+        >
           <summary className="min-h-12 px-4 flex items-center cursor-pointer text-[15px]">איך זה מחושב</summary>
           <div className="px-4 pb-4 space-y-4 text-[15px]">
             <div className="space-y-2">

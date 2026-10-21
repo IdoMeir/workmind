@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { WorkEntry, Client } from '@/types';
 import { Printer, FileDown, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Money from '@/components/shared/Money';
 
 interface HoursReportViewProps {
   entries: WorkEntry[];
@@ -48,6 +49,52 @@ const tdStyle: React.CSSProperties = {
   borderBottom: '1px solid #e5e7eb',
   fontSize: '13px',
 };
+
+function ReportTable({ entries, totalHours, totalAmount }: { entries: WorkEntry[]; totalHours: number; totalAmount: number }) {
+  return (
+    <table className="w-full text-[13px]">
+      <thead>
+        <tr className="border-b border-rule">
+          <th className="text-start px-3 py-2 font-semibold">תאריך</th>
+          <th className="text-start px-3 py-2 font-semibold">שעות</th>
+          <th className="text-start px-3 py-2 font-semibold">שעון</th>
+          <th className="text-start px-3 py-2 font-semibold">תיאור</th>
+          <th className="text-end px-3 py-2 font-semibold">סכום</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-rule">
+        {entries.map(entry => {
+          const { timeRange, rest } = extractTimeRange(entry.description);
+          return (
+            <tr key={entry.id}>
+              <td className="px-3 py-2 whitespace-nowrap">{formatDate(entry.entry_date)}</td>
+              <td className="px-3 py-2 font-semibold">{entry.hours}</td>
+              <td className="px-3 py-2 whitespace-nowrap text-text-mute"><bdi>{timeRange ?? '—'}</bdi></td>
+              <td className="px-3 py-2 text-text-mute">{rest || '—'}</td>
+              <td className="px-3 py-2 text-end"><Money amount={Number(entry.amount)} /></td>
+            </tr>
+          );
+        })}
+        {entries.length === 0 && (
+          <tr>
+            <td colSpan={5} className="px-3 py-8 text-center text-text-mute">אין רשומות שעות לתקופה זו</td>
+          </tr>
+        )}
+      </tbody>
+      {entries.length > 0 && (
+        <tfoot>
+          <tr className="border-t border-text font-semibold">
+            <td className="px-3 py-2">סה&quot;כ</td>
+            <td className="px-3 py-2">{totalHours} שעות</td>
+            <td />
+            <td />
+            <td className="px-3 py-2 text-end"><Money amount={totalAmount} /></td>
+          </tr>
+        </tfoot>
+      )}
+    </table>
+  );
+}
 
 export default function HoursReportView({ entries, client, year, month, printMode = false }: HoursReportViewProps) {
   const router = useRouter();
@@ -107,58 +154,18 @@ export default function HoursReportView({ entries, client, year, month, printMod
     }
   }
 
-  // ── Print mode: clean page with PDF table, no toolbar ──────────────────────
+  // ── Print mode: נפתח בטאב ?print=true ומדפיס מיד ─────────────────────────
   if (printMode) {
     return (
-      <div className="min-h-screen bg-white p-6 print:p-0">
+      <div className="min-h-screen bg-ink text-text p-6 print:p-0">
         <div className="max-w-3xl mx-auto print:max-w-none">
           <div className="mb-6 text-center print:mb-4">
-            <h1 className="text-2xl font-bold text-gray-900 print:text-xl">דו&quot;ח שעות</h1>
-            <p className="text-gray-600 mt-1">{monthName} {year}</p>
-            <p className="text-gray-700 font-medium mt-1">{client.name}</p>
+            <h1 className="wm-title text-[24px]">דו&quot;ח שעות</h1>
+            <p className="text-text-mute mt-1">{monthName} {year}</p>
+            <p className="font-semibold mt-1">{client.name}</p>
           </div>
-          <div className="bg-white overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 print:bg-gray-100 border-b">
-                  <th className="text-right px-4 py-3 font-semibold text-gray-700">תאריך</th>
-                  <th className="text-right px-4 py-3 font-semibold text-gray-700">משעה</th>
-                  <th className="text-right px-4 py-3 font-semibold text-gray-700">עד שעה</th>
-                  <th className="text-right px-4 py-3 font-semibold text-gray-700">שעות</th>
-                  <th className="text-right px-4 py-3 font-semibold text-gray-700">הערות</th>
-                </tr>
-              </thead>
-              <tbody>
-                {hoursEntries.map((entry, i) => {
-                  const { timeRange, rest } = extractTimeRange(entry.description);
-                  const { from, to } = splitTimeRange(timeRange);
-                  return (
-                    <tr key={entry.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
-                      <td className="px-4 py-2.5 text-gray-700 whitespace-nowrap">{formatDate(entry.entry_date)}</td>
-                      <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap">{from}</td>
-                      <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap">{to}</td>
-                      <td className="px-4 py-2.5 text-gray-700 font-medium">{entry.hours}</td>
-                      <td className="px-4 py-2.5 text-gray-600">{rest || '—'}</td>
-                    </tr>
-                  );
-                })}
-                {hoursEntries.length === 0 && (
-                  <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">אין רשומות שעות לתקופה זו</td></tr>
-                )}
-              </tbody>
-              {hoursEntries.length > 0 && (
-                <tfoot>
-                  <tr className="border-t-2 border-gray-300 font-bold">
-                    <td className="px-4 py-3 text-gray-800">סה&quot;כ</td>
-                    <td /><td />
-                    <td className="px-4 py-3 text-gray-800">{totalHours} שעות</td>
-                    <td />
-                  </tr>
-                </tfoot>
-              )}
-            </table>
-          </div>
-          <p className="mt-6 text-xs text-gray-400 text-center print:mt-4">
+          <ReportTable entries={hoursEntries} totalHours={totalHours} totalAmount={totalAmount} />
+          <p className="mt-6 text-[13px] text-text-mute text-center print:mt-4">
             דו&quot;ח זה הופק מתוך WorkMind • {new Date().toLocaleDateString('he-IL')}
           </p>
         </div>
@@ -244,84 +251,30 @@ export default function HoursReportView({ entries, client, year, month, printMod
         </div>
       </div>
 
-      {/* Main page */}
-      <div className="min-h-screen bg-gray-50 print:bg-white">
-        {/* Toolbar — hidden in print */}
-        <div className="no-print flex items-center gap-3 px-4 py-3 bg-white border-b sticky top-0 z-10">
-          <button onClick={() => router.back()} aria-label="חזרה" className="min-w-11 min-h-11 inline-flex items-center justify-center text-gray-500 hover:text-gray-700">
-            <ArrowRight size={20} />
+      <div className="min-h-screen bg-ink text-text">
+        <div className="no-print flex items-center gap-2 px-2 py-2 border-b border-rule sticky top-0 z-10 bg-ink">
+          <button onClick={() => router.back()} aria-label="חזרה" className="wm-btn text-text-mute">
+            <ArrowRight size={20} aria-hidden="true" />
           </button>
-          <span className="font-medium text-gray-800 flex-1">דו&quot;ח שעות — {client.name}</span>
-          <button
-            onClick={() => window.print()}
-            className="flex items-center gap-2 bg-gray-100 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-200"
-          >
-            <Printer size={16} />
-            הדפס
+          <span className="flex-1 truncate">דו&quot;ח שעות — {client.name}</span>
+          <button onClick={() => window.print()} className="wm-btn wm-btn-ghost">
+            <Printer size={16} aria-hidden="true" /> הדפס
           </button>
-          <button
-            onClick={downloadPdf}
-            disabled={downloading}
-            className="flex items-center gap-2 bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-60"
-          >
-            <FileDown size={16} />
-            {downloading ? 'מכין...' : 'הורד PDF'}
+          <button onClick={downloadPdf} disabled={downloading} className="wm-btn wm-btn-brass">
+            <FileDown size={16} aria-hidden="true" /> {downloading ? 'מכין…' : 'PDF'}
           </button>
         </div>
 
-        {/* Report body */}
-        <div className="max-w-3xl mx-auto p-6 print:p-0 print:max-w-none">
-          <div className="mb-6 text-center print:mb-4">
-            <h1 className="text-2xl font-bold text-gray-900 print:text-xl">דו&quot;ח שעות</h1>
-            <p className="text-gray-600 mt-1">{monthName} {year}</p>
-            <p className="text-gray-700 font-medium mt-1">{client.name}</p>
+        <div className="max-w-3xl mx-auto p-4 print:p-0 print:max-w-none">
+          <div className="mb-4 text-center">
+            <h1 className="wm-title text-[24px]">דו&quot;ח שעות</h1>
+            <p className="text-text-mute mt-1">{monthName} {year}</p>
+            <p className="font-semibold mt-1">{client.name}</p>
           </div>
-
-          {/* Screen table — full columns including amount */}
-          <div className="bg-white rounded-xl shadow-sm print:shadow-none overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 print:bg-gray-100 border-b">
-                  <th className="text-right px-4 py-3 font-semibold text-gray-700">תאריך</th>
-                  <th className="text-right px-4 py-3 font-semibold text-gray-700">שעות</th>
-                  <th className="text-right px-4 py-3 font-semibold text-gray-700">שעון</th>
-                  <th className="text-right px-4 py-3 font-semibold text-gray-700">תיאור</th>
-                  <th className="text-left px-4 py-3 font-semibold text-gray-700">סכום</th>
-                </tr>
-              </thead>
-              <tbody>
-                {hoursEntries.map((entry, i) => {
-                  const { timeRange, rest } = extractTimeRange(entry.description);
-                  return (
-                    <tr key={entry.id} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
-                      <td className="px-4 py-2.5 text-gray-700 whitespace-nowrap">{formatDate(entry.entry_date)}</td>
-                      <td className="px-4 py-2.5 text-gray-700 font-medium">{entry.hours}</td>
-                      <td className="px-4 py-2.5 text-gray-500 whitespace-nowrap">{timeRange ?? '—'}</td>
-                      <td className="px-4 py-2.5 text-gray-600">{rest || '—'}</td>
-                      <td className="px-4 py-2.5 text-gray-800 font-medium text-left">₪{entry.amount.toLocaleString()}</td>
-                    </tr>
-                  );
-                })}
-                {hoursEntries.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-gray-400">אין רשומות שעות לתקופה זו</td>
-                  </tr>
-                )}
-              </tbody>
-              {hoursEntries.length > 0 && (
-                <tfoot>
-                  <tr className="border-t-2 border-gray-300 font-bold">
-                    <td className="px-4 py-3 text-gray-800">סה&quot;כ</td>
-                    <td className="px-4 py-3 text-gray-800">{totalHours} שעות</td>
-                    <td /><td />
-                    <td className="px-4 py-3 text-gray-800 text-left">₪{totalAmount.toLocaleString()}</td>
-                  </tr>
-                </tfoot>
-              )}
-            </table>
+          <div className="wm-card overflow-x-auto">
+            <ReportTable entries={hoursEntries} totalHours={totalHours} totalAmount={totalAmount} />
           </div>
-
-          <p className="mt-6 text-xs text-gray-400 text-center print:mt-4">
+          <p className="mt-6 text-[13px] text-text-mute text-center">
             דו&quot;ח זה הופק מתוך WorkMind • {new Date().toLocaleDateString('he-IL')}
           </p>
         </div>
