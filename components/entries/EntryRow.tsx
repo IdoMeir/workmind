@@ -48,13 +48,15 @@ export default function EntryRow({ entry, onEdit, onDelete }: EntryRowProps) {
         <div className="flex gap-0.5 shrink-0">
           <button
             onClick={() => onEdit(entry)}
-            className="p-1.5 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+            aria-label="ערוך רשומה"
+            className="min-w-11 min-h-11 inline-flex items-center justify-center text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
           >
             <Pencil size={14} />
           </button>
           <button
             onClick={() => onDelete(entry)}
-            className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            aria-label="מחק רשומה"
+            className="min-w-11 min-h-11 inline-flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
           >
             <Trash2 size={14} />
           </button>

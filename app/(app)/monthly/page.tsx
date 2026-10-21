@@ -53,12 +53,13 @@ export default function MonthlyPage() {
       <div className="p-4 space-y-4">
         {/* Month navigator */}
         <div className="flex items-center justify-between bg-white rounded-xl border border-gray-200 px-4 py-3">
-          <button onClick={prevMonth} className="text-gray-500 hover:text-gray-800 text-xl px-2">→</button>
+          <button onClick={prevMonth} aria-label="החודש הקודם" className="min-w-11 min-h-11 inline-flex items-center justify-center text-gray-500 hover:text-gray-800 text-xl">→</button>
           <span className="font-semibold text-gray-900">{formatHebrewMonthYear(month, year)}</span>
           <button
             onClick={nextMonth}
             disabled={isCurrentMonth}
-            className="text-gray-500 hover:text-gray-800 disabled:opacity-30 text-xl px-2"
+            aria-label="החודש הבא"
+            className="min-w-11 min-h-11 inline-flex items-center justify-center text-gray-500 hover:text-gray-800 disabled:opacity-30 text-xl"
           >
             ←
           </button>

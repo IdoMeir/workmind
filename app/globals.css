@@ -1,5 +1,34 @@
 @import "tailwindcss";
 
+/*
+ * מערכת העיצוב של WorkMind v2 (מפרט סעיף 1).
+ * פליז = עסק. פלדה = שכר. מרווה = נטו/תקין. alert = רק דדליין בתוך 14 יום או שגיאה.
+ * הניגודיות של כל צבע טקסט נבדקת ב-lib/design/__tests__/contrast.test.ts מול הערכים כאן.
+ */
+@theme {
+  --color-ink: #12201F;        /* רקע ראשי */
+  --color-ink-raised: #1A2B29; /* כרטיסים, שדות */
+  --color-ink-track: #1E302E;  /* רקע פסים */
+  --color-rule: #223634;       /* קווי הפרדה */
+  --color-brass: #C89B4A;      /* העסק */
+  --color-steel: #8FA9C2;      /* השכר */
+  --color-sage: #7FA894;       /* נטו / תקין / בוצע */
+  --color-alert: #D9826B;      /* מועד קרוב / חריגה / שגיאה */
+  --color-text: #F0EDE6;       /* טקסט ראשי */
+  --color-text-mute: #8FA39E;  /* תוויות */
+  --color-text-faint: #5C716C; /* אייקונים בלבד — אסור לטקסט (NEVER #6) */
+
+  --font-num: 'Heebo', Arial, sans-serif;               /* מספרים, 800 */
+  --font-title: 'Frank Ruhl Libre', Georgia, serif;     /* כותרות ושמות, 500 */
+  --font-ui: 'Assistant', 'Heebo', Arial, sans-serif;   /* ממשק, 400/600 */
+
+  --radius-card: 10px;
+
+  /* גודל טקסט מינימלי 13px: text-xs של Tailwind (12px) מוגדל ל-13px. */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: calc(1.125 / 0.8125);
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -13,7 +42,7 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Heebo', Arial, Helvetica, sans-serif;
+  font-family: var(--font-ui);
   /* Prevent text size adjustment on orientation change */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -22,6 +51,26 @@ body {
 /* Prevent double-tap zoom on buttons */
 button, a {
   touch-action: manipulation;
+}
+
+/*
+ * טבעת פוקוס brass ברוחב 2px על כל רכיב אינטראקטיבי (מפרט סעיף 1).
+ * מחוץ ל-layer ועם !important כדי ש-outline-none של רכיבים קיימים לא יעלים אותה.
+ */
+:focus-visible {
+  outline: 2px solid var(--color-brass) !important;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Native-feel tap highlight */

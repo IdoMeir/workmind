@@ -248,7 +248,7 @@ export default function HoursReportView({ entries, client, year, month, printMod
       <div className="min-h-screen bg-gray-50 print:bg-white">
         {/* Toolbar — hidden in print */}
         <div className="no-print flex items-center gap-3 px-4 py-3 bg-white border-b sticky top-0 z-10">
-          <button onClick={() => router.back()} className="p-2 text-gray-500 hover:text-gray-700">
+          <button onClick={() => router.back()} aria-label="חזרה" className="min-w-11 min-h-11 inline-flex items-center justify-center text-gray-500 hover:text-gray-700">
             <ArrowRight size={20} />
           </button>
           <span className="font-medium text-gray-800 flex-1">דו&quot;ח שעות — {client.name}</span>

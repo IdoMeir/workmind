@@ -110,7 +110,7 @@ export default function EditEntryDialog({ entry, onClose, onSave }: EditEntryDia
       <div className="relative bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl p-5 shadow-xl">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">עריכת רשומה</h2>
-          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600"><X size={20} /></button>
+          <button onClick={onClose} aria-label="סגור" className="min-w-11 min-h-11 inline-flex items-center justify-center text-gray-400 hover:text-gray-600"><X size={20} /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">

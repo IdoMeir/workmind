@@ -101,7 +101,7 @@ export default function EntriesPage() {
 
       {/* Month navigator */}
       <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
-        <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
+        <button onClick={nextMonth} aria-label="החודש הבא" className="min-w-11 min-h-11 inline-flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500">
           <ChevronRight size={18} />
         </button>
         <div className="text-center">
@@ -112,7 +112,7 @@ export default function EntriesPage() {
             <p className="text-xs text-gray-400">{formatCurrency(monthTotal)}</p>
           )}
         </div>
-        <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
+        <button onClick={prevMonth} aria-label="החודש הקודם" className="min-w-11 min-h-11 inline-flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500">
           <ChevronLeft size={18} />
         </button>
       </div>

@@ -150,7 +150,7 @@ export default function QuickAddHoursDialog({ open, onClose, onAdd, clients }: Q
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
           <h2 className="text-lg font-semibold">הוסף שעות</h2>
-          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} aria-label="סגור" className="min-w-11 min-h-11 inline-flex items-center justify-center text-gray-400 hover:text-gray-600">
             <X size={20} />
           </button>
         </div>

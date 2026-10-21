@@ -15,7 +15,7 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 right-0 left-0 bg-white border-t border-gray-200 z-50 no-print">
+    <nav aria-label="ניווט ראשי" className="fixed bottom-0 right-0 left-0 bg-white border-t border-gray-200 z-50 no-print">
       <div className="flex">
         {tabs.map(({ href, label, icon: Icon }) => {
           const isActive = pathname === href;
@@ -23,11 +23,12 @@ export default function BottomNav() {
             <Link
               key={href}
               href={href}
-              className={`flex-1 flex flex-col items-center justify-center py-2 gap-1 text-xs transition-colors ${
+              aria-current={isActive ? 'page' : undefined}
+              className={`flex-1 min-h-11 flex flex-col items-center justify-center py-2 gap-1 text-xs transition-colors ${
                 isActive ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              <Icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
+              <Icon size={22} strokeWidth={isActive ? 2.5 : 1.8} aria-hidden="true" />
               <span>{label}</span>
             </Link>
           );

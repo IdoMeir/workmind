@@ -106,7 +106,7 @@ export default function EditClientDialog({ client, onClose, onSave }: EditClient
       <div className="relative bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl flex flex-col max-h-[92dvh] sm:max-h-[85vh]">
         <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
           <h2 className="text-lg font-semibold">עריכת לקוח</h2>
-          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} aria-label="סגור" className="min-w-11 min-h-11 inline-flex items-center justify-center text-gray-400 hover:text-gray-600">
             <X size={20} />
           </button>
         </div>
@@ -201,7 +201,8 @@ export default function EditClientDialog({ client, onClose, onSave }: EditClient
                 <button
                   type="button"
                   onClick={() => removePreset(i)}
-                  className="p-1 text-gray-400 hover:text-red-500"
+                  aria-label="הסר תעריף"
+                  className="min-w-11 min-h-11 inline-flex items-center justify-center text-gray-400 hover:text-red-500"
                 >
                   <Trash2 size={16} />
                 </button>

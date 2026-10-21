@@ -156,7 +156,7 @@ export default function GenerateReceiptDialog({
       <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between">
           <h2 className="font-bold text-lg text-gray-900">הפקת קבלה</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+          <button onClick={onClose} aria-label="סגור" className="min-w-11 min-h-11 inline-flex items-center justify-center text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
         </div>
 
         <div className="p-5 space-y-5">

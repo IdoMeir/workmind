@@ -45,14 +45,14 @@ export default function ClientCard({ client, onEdit, onDelete }: ClientCardProps
         <div className="flex gap-1 shrink-0">
           <button
             onClick={() => onEdit(client)}
-            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            className="min-w-11 min-h-11 inline-flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
             aria-label="ערוך לקוח"
           >
             <Pencil size={16} />
           </button>
           <button
             onClick={() => onDelete(client)}
-            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            className="min-w-11 min-h-11 inline-flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             aria-label="מחק לקוח"
           >
             <Trash2 size={16} />
