@@ -9,7 +9,7 @@ import Money from '@/components/shared/Money';
 import { BusinessIcon, SalaryIcon } from '@/components/shared/SourceIcon';
 import { formatDecimal, formatHebrewMonthYear, formatHours, formatShortDate, getCurrentMonthYear } from '@/lib/hebrew-format';
 import { comparePayslip, expectedMonthGross, summarizeMonth } from '@/lib/payroll/payslip';
-import { methodLabel } from '@/lib/payments';
+import { effectiveHourlyRate, linkedHours, methodLabel, openWorkEstimate, sumPayments } from '@/lib/payments';
 import type { Client, Employer, MonthlySummary, Payment, Payslip, Shift } from '@/types';
 
 async function getJson<T>(url: string, fallback: T): Promise<T> {
@@ -112,7 +112,9 @@ export default function MonthlyPage() {
   const expectedGross = data && employer ? expectedMonthGross(data.shifts, employer) : 0;
   const comparison = gross !== '' && !isNaN(Number(gross)) ? comparePayslip(expectedGross, Number(gross)) : null;
 
-  const paymentsTotal = (data?.payments ?? []).reduce((s, p) => s + Number(p.amount), 0);
+  // התעריף משתנה: ההכנסה מהעסק = התשלומים שהתקבלו החודש. סכומי העבודות הם הערכה.
+  const paymentsTotal = sumPayments(data?.payments ?? []);
+  const openWork = openWorkEstimate(data?.summary?.byClient.flatMap(c => c.entries) ?? []);
 
   async function deletePayment(id: string) {
     const res = await fetch(`/api/payments/${id}`, { method: 'DELETE' });
@@ -241,8 +243,15 @@ export default function MonthlyPage() {
               <h2 id="month-business" className="flex items-center gap-2 wm-title text-[17px]">
                 <BusinessIcon size={18} /> עסק
               </h2>
-              <Money amount={data.summary?.totalAmount ?? 0} className="wm-num text-[21px] text-brass" />
+              <Money amount={paymentsTotal} context="שהתקבלו החודש" className="wm-num text-[21px] text-brass" />
             </div>
+            <p className="text-[13px] text-text-mute -mt-2">התשלומים שהתקבלו החודש</p>
+            {openWork > 0 && (
+              <p className="text-[15px] text-text-mute">
+                עבודה פתוחה: <Money amount={openWork} context="משוער" /> (משוער)
+              </p>
+            )}
+            <h3 className="text-[13px] text-text-mute">עבודות החודש — סכומים משוערים לפי התעריף ברישום</h3>
             <MonthlySummaryTable
               clientSummaries={data.summary?.byClient ?? []}
               year={year}
@@ -258,7 +267,10 @@ export default function MonthlyPage() {
                 <p className="text-[13px] text-text-mute">לא נרשם כסף שהתקבל החודש.</p>
               ) : (
                 <ul className="divide-y divide-rule">
-                  {data.payments.map(p => (
+                  {data.payments.map(p => {
+                    const hours = linkedHours(p.entries ?? []);
+                    const rate = effectiveHourlyRate(p.amount, hours);
+                    return (
                     <li key={p.id} className="min-h-11 py-2 flex items-center gap-2 text-[15px]">
                       <span className="text-[13px] text-text-mute w-10 shrink-0">{formatShortDate(p.received_date)}</span>
                       <span className="flex-1 min-w-0">
@@ -267,12 +279,23 @@ export default function MonthlyPage() {
                           {methodLabel(p.method)}
                           {p.external_receipt_no ? ` · קבלה ${p.external_receipt_no}` : ''}
                         </span>
+                        <span className="block text-[13px] text-text-mute">
+                          {hours > 0 ? (
+                            <>
+                              <bdi className="wm-num">{formatDecimal(hours)}</bdi> שעות מקושרות · תעריף בפועל{' '}
+                              <Money amount={rate!} fractionDigits={2} context="לשעה" className="text-text" /> לשעה
+                            </>
+                          ) : (
+                            'אין שעות מקושרות'
+                          )}
+                        </span>
                       </span>
                       <Money amount={Number(p.amount)} className="wm-num" />
                       <button onClick={() => deletePayment(p.id)} aria-label={`מחק תקבול מ${p.client?.name ?? 'לקוח'}`}
                         className="wm-btn text-text-mute text-[13px]">מחק</button>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               )}
               <button onClick={() => setPaymentOpen(true)} className="wm-btn wm-btn-brass w-full">התקבל תשלום</button>

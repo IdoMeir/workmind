@@ -45,8 +45,8 @@ export default function QuickAddHoursDialog({ open, onClose, onAdd, clients, def
   const [clientId, setClientId] = useState('');
   const [date, setDate] = useState(todayISO());
   const [description, setDescription] = useState('');
-  const [customAmount, setCustomAmount] = useState('');
-  const [showCustom, setShowCustom] = useState(false);
+  /** תעריף שהוקלד ברישום הזה. ריק = ברירת המחדל של הלקוח (או התעריף המוגדר שנבחר). */
+  const [rateInput, setRateInput] = useState('');
   const [selectedPreset, setSelectedPreset] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -63,9 +63,10 @@ export default function QuickAddHoursDialog({ open, onClose, onAdd, clients, def
     }
   }, [timeFrom, timeTo]);
 
-  // Reset selected preset when client changes
+  // לקוח אחר → חוזרים לתעריפי ברירת המחדל שלו
   useEffect(() => {
     setSelectedPreset('');
+    setRateInput('');
   }, [effectiveClientId]);
 
   useEffect(() => {
@@ -75,23 +76,20 @@ export default function QuickAddHoursDialog({ open, onClose, onAdd, clients, def
       setTimeTo('');
       setClientId(defaultClientId && clients.some(c => c.id === defaultClientId && c.is_active) ? defaultClientId : '');
       setDescription('');
-      setCustomAmount('');
-      setShowCustom(false);
+      setRateInput('');
       setSelectedPreset('');
       setError('');
       setDate(todayISO());
     }
   }, [open, defaultClientId, clients]);
 
-  // Rate preview
+  // התעריף מוצע מברירת המחדל של הלקוח (או מהתעריף המוגדר), וניתן לשינוי בכל רישום.
+  // הסכום שנשמר הוא הערכה — ההכנסה בפועל היא התשלום.
   const hoursNum = parseFloat(hours) || 0;
   const activePreset = presets.find(p => p.name === selectedPreset);
-  const effectiveRate = activePreset ? activePreset.rate : (selectedClient?.hourly_rate ?? null);
-  const previewAmount = customAmount
-    ? parseFloat(customAmount)
-    : effectiveRate && hoursNum
-    ? Math.round(hoursNum * effectiveRate * 100) / 100
-    : null;
+  const defaultRate = activePreset ? activePreset.rate : (selectedClient?.hourly_rate != null ? Number(selectedClient.hourly_rate) : null);
+  const effectiveRate = rateInput !== '' ? parseFloat(rateInput) || null : defaultRate;
+  const previewAmount = effectiveRate && hoursNum ? Math.round(hoursNum * effectiveRate * 100) / 100 : null;
 
   async function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault();
@@ -106,12 +104,8 @@ export default function QuickAddHoursDialog({ open, onClose, onAdd, clients, def
       desc = desc ? `${timeLabel} | ${desc}` : timeLabel;
     }
 
-    // Compute custom_amount from preset if selected
-    const resolvedCustomAmount = customAmount
-      ? parseFloat(customAmount)
-      : activePreset
-      ? Math.round(parseFloat(hours) * activePreset.rate * 100) / 100
-      : undefined;
+    // הסכום המשוער לפי התעריף שבטופס (לא נעול לתעריף הלקוח)
+    const resolvedCustomAmount = previewAmount ?? undefined;
 
     setLoading(true);
     try {
@@ -193,11 +187,12 @@ export default function QuickAddHoursDialog({ open, onClose, onAdd, clients, def
           </div>
         )}
 
-        {/* Rate preset selector — shown only when client has hourly presets */}
+        {/* תעריף מוגדר — ממלא את שדה התעריף */}
         {presets.length > 0 && (
           <div>
-            <label htmlFor="hours-preset" className="wm-label">תעריף</label>
-            <select id="hours-preset" value={selectedPreset} onChange={e => setSelectedPreset(e.target.value)} className="wm-field">
+            <label htmlFor="hours-preset" className="wm-label">תעריף מוגדר</label>
+            <select id="hours-preset" value={selectedPreset}
+              onChange={e => { setSelectedPreset(e.target.value); setRateInput(''); }} className="wm-field">
               {selectedClient?.hourly_rate && (
                 <option value="">ברירת מחדל — {selectedClient.hourly_rate}₪ לשעה</option>
               )}
@@ -207,6 +202,14 @@ export default function QuickAddHoursDialog({ open, onClose, onAdd, clients, def
             </select>
           </div>
         )}
+
+        <div>
+          <label htmlFor="hours-rate" className="wm-label">תעריף לשעה (₪) — אפשר לשנות</label>
+          <input id="hours-rate" type="number" inputMode="decimal" min="0" step="any" className="wm-field"
+            value={rateInput !== '' ? rateInput : defaultRate ?? ''}
+            onChange={e => setRateInput(e.target.value)}
+            placeholder="לפי הלקוח" />
+        </div>
 
         <div>
           <label htmlFor="hours-date" className="wm-label">תאריך</label>
@@ -219,22 +222,10 @@ export default function QuickAddHoursDialog({ open, onClose, onAdd, clients, def
             className="wm-field" placeholder="רשות" />
         </div>
 
-        <button type="button" onClick={() => setShowCustom(v => !v)} aria-expanded={showCustom}
-          className="min-h-11 text-[13px] text-text-mute underline">
-          {showCustom ? 'הסתר סכום ידני' : 'שנה סכום ידנית'}
-        </button>
-
-        {showCustom && (
-          <div>
-            <label htmlFor="hours-custom" className="wm-label">סכום ידני (₪)</label>
-            <input id="hours-custom" type="number" inputMode="decimal" min="0" step="1" value={customAmount}
-              onChange={e => setCustomAmount(e.target.value)} className="wm-field" />
-          </div>
-        )}
-
         {previewAmount !== null && (
           <p className="text-[15px] text-text" aria-live="polite">
-            סכום <Money amount={previewAmount} fractionDigits={2} className="wm-num text-brass" />
+            סכום משוער <Money amount={previewAmount} fractionDigits={2} context="משוער" className="wm-num text-brass" />
+            <span className="block text-[13px] text-text-mute">ההכנסה בפועל נקבעת לפי התשלום שיתקבל.</span>
           </p>
         )}
 

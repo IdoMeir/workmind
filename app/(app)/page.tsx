@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, RotateCcw } from 'lucide-react';
-import type { Client, Employer, Shift, UserSettings, WorkEntry } from '@/types';
+import type { Client, Employer, Payment, Shift, UserSettings, WorkEntry } from '@/types';
 import Money from '@/components/shared/Money';
 import { BusinessIcon, SalaryIcon } from '@/components/shared/SourceIcon';
 import ShiftDialog from '@/components/payroll/ShiftDialog';
@@ -16,13 +16,17 @@ import { businessActivity } from '@/lib/tax/status';
 import { SELF_STATUS_WINDOW_DAYS } from '@/lib/tax/constants-2026';
 import { addDays } from '@/lib/payroll/overtime';
 import { track } from '@/lib/events';
+import { openWorkEstimate, sumPayments } from '@/lib/payments';
 
 interface TodayData {
   settings: UserSettings | null;
   employer: Employer | null;
   clients: Client[];
   monthShifts: Shift[];
-  monthEntries: WorkEntry[];
+  /** תשלומים שהתקבלו החודש — זו ההכנסה מהעסק. */
+  monthPayments: Payment[];
+  /** כל העבודות שעוד לא שולמו (הסכום שלהן משוער). */
+  openEntries: WorkEntry[];
   recentShifts: Shift[];
   recentEntries: WorkEntry[];
   /** עבודות העסק ב-91 הימים האחרונים — לאינדיקטור עצמאי. */
@@ -62,12 +66,13 @@ export default function TodayPage() {
 
   const load = useCallback(async () => {
     const windowFrom = addDays(todayISO(), -(SELF_STATUS_WINDOW_DAYS - 1));
-    const [settings, employers, clients, monthShifts, monthEntries, recentShifts, recentEntries, activityEntries] = await Promise.all([
+    const [settings, employers, clients, monthShifts, monthPayments, openEntries, recentShifts, recentEntries, activityEntries] = await Promise.all([
       getJson<UserSettings | null>('/api/settings', null),
       getJson<Employer[]>('/api/employers', []),
       getJson<Client[]>('/api/clients', []),
       getJson<Shift[]>(`/api/shifts?year=${year}&month=${month}`, []),
-      getJson<WorkEntry[]>(`/api/entries?year=${year}&month=${month}`, []),
+      getJson<Payment[]>(`/api/payments?year=${year}&month=${month}`, []),
+      getJson<WorkEntry[]>('/api/entries?open=1', []),
       getJson<Shift[]>('/api/shifts?limit=5', []),
       getJson<WorkEntry[]>('/api/entries?limit=5', []),
       getJson<WorkEntry[]>(`/api/entries?from=${windowFrom}&to=${todayISO()}`, []),
@@ -77,7 +82,8 @@ export default function TodayPage() {
       employer: employers.find(e => !e.end_date) ?? employers[0] ?? null,
       clients,
       monthShifts,
-      monthEntries,
+      monthPayments,
+      openEntries,
       recentShifts,
       recentEntries,
       activityEntries,
@@ -100,7 +106,9 @@ export default function TodayPage() {
   }
 
   const salary = sum(data.monthShifts.map(s => Number(s.expected_amount ?? 0)));
-  const business = sum(data.monthEntries.map(e => Number(e.amount)));
+  // התעריף משתנה: הסכום ליד עבודה הוא הערכה. ההכנסה היא מה שהתקבל בפועל.
+  const business = sumPayments(data.monthPayments);
+  const openWork = openWorkEstimate(data.openEntries);
   const total = salary + business;
   const salaryPct = total > 0 ? (salary / total) * 100 : 0;
 
@@ -206,6 +214,11 @@ export default function TodayPage() {
           <span className="flex items-center gap-1.5"><SalaryIcon /> שכר <Money amount={salary} className="wm-num text-steel" /></span>
           <span className="flex items-center gap-1.5"><BusinessIcon /> עסק <Money amount={business} className="wm-num text-brass" /></span>
         </div>
+        {openWork > 0 && (
+          <p className="mt-1 text-[13px] text-text-mute text-end">
+            עבודה פתוחה: <Money amount={openWork} context="משוער" /> (משוער)
+          </p>
+        )}
       </section>
 
       {/* רישום — שני מקורות, שני צבעים */}
@@ -285,7 +298,7 @@ export default function TodayPage() {
                       ? <><bdi className="wm-num">{formatDecimal(Number(item.entry.hours))}</bdi> ש׳</>
                       : item.entry.event_name}
                   </span>
-                  <Money amount={Number(item.entry.amount)} className="wm-num text-brass" />
+                  <span className="text-text-mute" title="סכום משוער">≈<Money amount={Number(item.entry.amount)} context="משוער" className="wm-num" /></span>
                 </li>
               )
             )}

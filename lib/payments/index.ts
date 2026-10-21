@@ -38,3 +38,26 @@ export function turnoverByMonth(payments: PaymentAmount[], year: number): number
 export function isOpenEntry(e: Pick<WorkEntry, 'payment_id' | 'receipt_id'>): boolean {
   return !e.payment_id && !e.receipt_id;
 }
+
+/** סכום תקבולים (₪ שהתקבלו בפועל). */
+export function sumPayments(payments: { amount: number | string }[]): number {
+  return r2(payments.reduce((s, p) => s + Number(p.amount), 0));
+}
+
+/**
+ * עבודה פתוחה — הסכום שרשום ליד העבודה הוא הערכה בלבד (התעריף משתנה).
+ * מוצג בנפרד מההכנסה, שהיא התשלומים שהתקבלו.
+ */
+export function openWorkEstimate(entries: (Pick<WorkEntry, 'payment_id' | 'receipt_id'> & { amount: number | string })[]): number {
+  return r2(entries.filter(isOpenEntry).reduce((s, e) => s + Number(e.amount), 0));
+}
+
+/** שעות שקושרו לתקבול (רק רשומות שעות). */
+export function linkedHours(entries: { entry_type: string; hours: number | string | null }[]): number {
+  return r2(entries.reduce((s, e) => s + (e.entry_type === 'hours' ? Number(e.hours ?? 0) : 0), 0));
+}
+
+/** תעריף אפקטיבי = סכום התקבול ÷ השעות המקושרות. null כשאין שעות. */
+export function effectiveHourlyRate(amount: number | string, hours: number): number | null {
+  return hours > 0 ? r2(Number(amount) / hours) : null;
+}

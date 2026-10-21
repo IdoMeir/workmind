@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isOpenEntry, turnoverByMonth, turnoverFromPayments } from '../index';
+import { effectiveHourlyRate, isOpenEntry, linkedHours, openWorkEstimate, sumPayments, turnoverByMonth, turnoverFromPayments } from '../index';
 
 const payments = [
   { received_date: '2026-01-15', amount: 1_000 },
@@ -33,5 +33,38 @@ describe('עבודה פתוחה', () => {
   it('קושרה לתקבול או נכללה בקבלה ישנה → לא פתוחה', () => {
     expect(isOpenEntry({ payment_id: 'p', receipt_id: null })).toBe(false);
     expect(isOpenEntry({ payment_id: null, receipt_id: 'r' })).toBe(false);
+  });
+});
+
+describe('הכנסה = תשלומים, עבודה פתוחה = הערכה', () => {
+  const entries = [
+    { payment_id: null, receipt_id: null, amount: '546' },   // פתוחה
+    { payment_id: null, receipt_id: null, amount: 420 },     // פתוחה
+    { payment_id: 'p1', receipt_id: null, amount: 1_000 },   // שולמה
+    { payment_id: null, receipt_id: 'r1', amount: 700 },     // בקבלה ישנה
+  ];
+
+  it('סכום התקבולים', () => {
+    expect(sumPayments([{ amount: 1_000 }, { amount: '230.5' }])).toBe(1_230.5);
+  });
+
+  it('עבודה פתוחה משוערת — רק רשומות שלא שולמו', () => {
+    expect(openWorkEstimate(entries)).toBe(966);
+  });
+});
+
+describe('תעריף אפקטיבי לתקבול', () => {
+  it('סכום ÷ שעות מקושרות', () => {
+    const hours = linkedHours([
+      { entry_type: 'hours', hours: '6.5' },
+      { entry_type: 'hours', hours: 6 },
+      { entry_type: 'event', hours: null },
+    ]);
+    expect(hours).toBe(12.5);
+    expect(effectiveHourlyRate(1_050, hours)).toBe(84);
+  });
+
+  it('בלי שעות מקושרות → אין תעריף', () => {
+    expect(effectiveHourlyRate(700, 0)).toBeNull();
   });
 });

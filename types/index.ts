@@ -213,4 +213,6 @@ export interface Payment {
   receipt_id: string | null;
   created_at: string;
   client?: Pick<Client, 'id' | 'name'>;
+  /** העבודות שהתקבול משלם (מצורף ב-GET). */
+  entries?: Pick<WorkEntry, 'entry_type' | 'hours' | 'amount'>[];
 }

@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   const sp = request.nextUrl.searchParams;
   let query = supabase
     .from('wm_payments')
-    .select('*, client:wm_clients(id, name)')
+    .select('*, client:wm_clients(id, name), entries:wm_work_entries(entry_type, hours, amount)')
     .eq('user_id', user.id)
     .order('received_date', { ascending: false });
 
