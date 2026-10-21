@@ -82,3 +82,66 @@ export const generateReceiptSchema = z.object({
     total: z.number().positive(),
   })).optional(),
 });
+
+// ─── v2: מעסיק, משמרות, תלושים, תקבולים ──────────────────────
+
+const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const timeStr = z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/);
+const money = z.number().nonnegative();
+
+export const employerSchema = z.object({
+  name: z.string().min(1).max(200),
+  deduction_file: z.string().max(50).optional().nullable(),
+  start_date: dateStr.optional().nullable(),
+  end_date: dateStr.optional().nullable(),
+  pay_type: z.enum(['hourly', 'daily', 'monthly']),
+  hourly_rate: z.number().positive().optional().nullable(),
+  daily_rate: z.number().positive().optional().nullable(),
+  monthly_salary: z.number().positive().optional().nullable(),
+  standard_day_hours: z.number().positive().max(24),
+  short_day_paid_full: z.boolean(),
+  workweek_days: z.union([z.literal(5), z.literal(6)]),
+  short_day: z.number().int().min(0).max(6).nullable(),
+  break_minutes: z.number().int().min(0).max(240),
+  break_paid: z.boolean(),
+  ot_daily_threshold: z.number().positive().max(24),
+  ot_short_day_threshold: z.number().positive().max(24),
+  ot_weekly_threshold: z.number().positive().max(168),
+  travel_per_day: money.optional().nullable(),
+  has_existing_pension: z.boolean().optional().nullable(),
+}).refine(
+  d => (d.pay_type === 'daily' && d.daily_rate) || (d.pay_type === 'hourly' && d.hourly_rate) || (d.pay_type === 'monthly' && d.monthly_salary),
+  { message: 'חסר תעריף לסוג התשלום שנבחר' }
+);
+
+export const shiftSchema = z.object({
+  employer_id: z.string().uuid(),
+  shift_date: dateStr,
+  start_time: timeStr,
+  end_time: timeStr,
+  break_minutes: z.number().int().min(0).max(240),
+  is_rest_day: z.boolean(),
+  note: z.string().max(500).optional().nullable(),
+});
+
+export const payslipSchema = z.object({
+  employer_id: z.string().uuid(),
+  period_year: z.number().int().min(2020).max(2100),
+  period_month: z.number().int().min(1).max(12),
+  gross: money,
+  net: money.optional().nullable(),
+  income_tax: money.optional().nullable(),
+  ni_health: money.optional().nullable(),
+  pension_employee: money.optional().nullable(),
+});
+
+export const paymentSchema = z.object({
+  client_id: z.string().uuid(),
+  received_date: dateStr,
+  amount: z.number().positive(),
+  method: z.enum(['transfer', 'cash', 'check', 'bit', 'other']).nullable(),
+  external_receipt_no: z.string().max(50).optional().nullable(),
+  receipt_id: z.string().uuid().optional().nullable(),
+  /** עבודות פתוחות שהתקבול משלם עליהן. */
+  entry_ids: z.array(z.string().uuid()).default([]),
+});

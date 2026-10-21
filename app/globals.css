@@ -73,6 +73,73 @@ button, a {
   }
 }
 
+/*
+ * רכיבי בסיס כהים למסכי v2. פינות 10px, בלי צללים ובלי גרדיאנטים.
+ * אזור מגע מינימלי 44px לכל כפתור ושדה.
+ */
+@layer components {
+  .wm-card {
+    background: var(--color-ink-raised);
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-card);
+  }
+  .wm-label {
+    display: block;
+    font-size: 0.8125rem;
+    color: var(--color-text-mute);
+    margin-bottom: 0.25rem;
+  }
+  .wm-field {
+    width: 100%;
+    min-height: 44px;
+    background: var(--color-ink);
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-card);
+    color: var(--color-text);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9375rem;
+    color-scheme: dark;
+  }
+  .wm-field::placeholder {
+    color: var(--color-text-mute);
+  }
+  .wm-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-card);
+    font-weight: 600;
+    font-size: 0.9375rem;
+  }
+  .wm-btn:disabled {
+    opacity: 0.5;
+  }
+  .wm-btn-brass { background: var(--color-brass); color: var(--color-ink); }
+  .wm-btn-steel { background: var(--color-steel); color: var(--color-ink); }
+  .wm-btn-sage { background: var(--color-sage); color: var(--color-ink); }
+  .wm-btn-ghost { border: 1px solid var(--color-rule); color: var(--color-text); }
+  .wm-btn-danger { border: 1px solid var(--color-alert); color: var(--color-alert); }
+  .wm-num {
+    font-family: var(--font-num);
+    font-weight: 800;
+  }
+  .wm-title {
+    font-family: var(--font-title);
+    font-weight: 500;
+  }
+  .wm-error {
+    border: 1px solid var(--color-alert);
+    color: var(--color-alert);
+    border-radius: var(--radius-card);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+}
+
 /* Native-feel tap highlight */
 * {
   -webkit-tap-highlight-color: transparent;

@@ -36,3 +36,30 @@ export function todayISO(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
+
+const DAY_LETTERS = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
+export const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+
+/** "יום ב׳, 20.10" */
+export function formatDayAndDate(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  return `יום ${DAY_LETTERS[dow]}, ${d}.${m}`;
+}
+
+/** "19.10" */
+export function formatShortDate(dateStr: string): string {
+  const [, m, d] = dateStr.split('-').map(Number);
+  return `${d}.${m}`;
+}
+
+/** 9 → "9:00", 8.6 → "8:36" */
+export function formatHours(hours: number): string {
+  const total = Math.round(hours * 60);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
+/** 8.6 → "8.6", 9 → "9" */
+export function formatDecimal(n: number, digits = 2): string {
+  return Number(n.toFixed(digits)).toLocaleString('he-IL', { maximumFractionDigits: digits });
+}

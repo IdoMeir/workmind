@@ -15,6 +15,11 @@ export interface UserSettings {
   salary_annual_income: number;
   receipt_counter_current_year: number;
   receipt_counter_year: number;
+  tax_track: 'zair' | 'regular';
+  is_kibbutz_member: boolean;
+  tax_coordination_done_year: number | null;
+  form101_done: boolean;
+  ni_advances_updated_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -52,6 +57,7 @@ export interface WorkEntry {
   amount: number;
   description: string | null;
   receipt_id: string | null;
+  payment_id: string | null;
   created_at: string;
   updated_at: string;
   client?: Client;
@@ -89,6 +95,7 @@ export interface Receipt {
   user_snapshot: UserSnapshot;
   line_items: ReceiptLineItem[];
   notes: string | null;
+  internal_note: string | null;
   created_at: string;
 }
 
@@ -178,4 +185,83 @@ export interface YearProgress {
   percentage: number;
   remaining: number;
   isExceeded: boolean;
+}
+
+// ─── v2: שכר, תקבולים, אירועי שימוש (מפרט סעיף 8) ─────────────
+
+export type PayType = 'hourly' | 'daily' | 'monthly';
+
+export interface Employer {
+  id: string;
+  user_id: string;
+  name: string;
+  deduction_file: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  pay_type: PayType;
+  hourly_rate: number | null;
+  daily_rate: number | null;
+  monthly_salary: number | null;
+  standard_day_hours: number;
+  short_day_paid_full: boolean;
+  workweek_days: 5 | 6;
+  short_day: number | null;
+  break_minutes: number;
+  break_paid: boolean;
+  ot_daily_threshold: number;
+  ot_short_day_threshold: number;
+  ot_weekly_threshold: number;
+  travel_per_day: number | null;
+  has_existing_pension: boolean | null;
+  created_at: string;
+}
+
+export interface Shift {
+  id: string;
+  user_id: string;
+  employer_id: string;
+  shift_date: string;
+  start_time: string;
+  end_time: string;
+  break_minutes: number;
+  is_rest_day: boolean;
+  hours_regular: number;
+  hours_125: number;
+  hours_150: number;
+  hours_rest: number;
+  hours_rest_ot_1: number;
+  hours_rest_ot_2: number;
+  expected_amount: number | null;
+  note: string | null;
+  created_at: string;
+}
+
+export interface Payslip {
+  id: string;
+  user_id: string;
+  employer_id: string;
+  period_year: number;
+  period_month: number;
+  gross: number;
+  net: number | null;
+  income_tax: number | null;
+  ni_health: number | null;
+  pension_employee: number | null;
+  file_path: string | null;
+  created_at: string;
+}
+
+export type PaymentMethod = 'transfer' | 'cash' | 'check' | 'bit' | 'other';
+
+export interface Payment {
+  id: string;
+  user_id: string;
+  client_id: string;
+  received_date: string;
+  amount: number;
+  method: PaymentMethod | null;
+  external_receipt_no: string | null;
+  receipt_id: string | null;
+  created_at: string;
+  client?: Pick<Client, 'id' | 'name'>;
 }
