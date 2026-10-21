@@ -1,16 +1,16 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import MonthlySummaryTable from '@/components/receipts/MonthlySummaryTable';
-import GenerateReceiptDialog from '@/components/receipts/GenerateReceiptDialog';
+import PaymentSheet from '@/components/payments/PaymentSheet';
 import ShiftDialog from '@/components/payroll/ShiftDialog';
 import Money from '@/components/shared/Money';
 import { BusinessIcon, SalaryIcon } from '@/components/shared/SourceIcon';
 import { formatDecimal, formatHebrewMonthYear, formatHours, formatShortDate, getCurrentMonthYear } from '@/lib/hebrew-format';
 import { comparePayslip, summarizeMonth } from '@/lib/payroll/payslip';
-import type { Client, Employer, MonthlySummary, Payslip, Shift } from '@/types';
+import { methodLabel } from '@/lib/payments';
+import type { Client, Employer, MonthlySummary, Payment, Payslip, Shift } from '@/types';
 
 async function getJson<T>(url: string, fallback: T): Promise<T> {
   try {
@@ -27,6 +27,7 @@ interface MonthData {
   payslip: Payslip | null;
   summary: MonthlySummary | null;
   clients: Client[];
+  payments: Payment[];
 }
 
 const shiftHours = (s: Shift) =>
@@ -34,7 +35,6 @@ const shiftHours = (s: Shift) =>
   Number(s.hours_rest) + Number(s.hours_rest_ot_1) + Number(s.hours_rest_ot_2);
 
 export default function MonthlyPage() {
-  const router = useRouter();
   const { month: currentMonth, year: currentYear } = getCurrentMonthYear();
   const [year, setYear] = useState(currentYear);
   const [month, setMonth] = useState(currentMonth);
@@ -47,23 +47,24 @@ export default function MonthlyPage() {
 
   const [shiftOpen, setShiftOpen] = useState(false);
   const [editShift, setEditShift] = useState<Shift | null>(null);
-  const [dialogClientId, setDialogClientId] = useState<string | null>(null);
+  const [paymentOpen, setPaymentOpen] = useState(false);
 
   const load = useCallback(async () => {
     setData(null);
-    const [employers, shifts, payslips, summary, clients] = await Promise.all([
+    const [employers, shifts, payslips, summary, clients, payments] = await Promise.all([
       getJson<Employer[]>('/api/employers', []),
       getJson<Shift[]>(`/api/shifts?year=${year}&month=${month}`, []),
       getJson<Payslip[]>(`/api/payslips?year=${year}&month=${month}`, []),
       getJson<MonthlySummary | null>(`/api/monthly-summary?year=${year}&month=${month}`, null),
       getJson<Client[]>('/api/clients', []),
+      getJson<Payment[]>(`/api/payments?year=${year}&month=${month}`, []),
     ]);
     const employer = employers.find(e => !e.end_date) ?? employers[0] ?? null;
     const payslip = payslips.find(p => p.employer_id === employer?.id) ?? null;
     setGross(payslip ? String(payslip.gross) : '');
     setNet(payslip?.net != null ? String(payslip.net) : '');
     setSlipMessage(null);
-    setData({ employer, shifts, payslip, summary, clients });
+    setData({ employer, shifts, payslip, summary, clients, payments });
   }, [year, month]);
 
   useEffect(() => { load(); }, [load]);
@@ -112,8 +113,12 @@ export default function MonthlyPage() {
   const expectedGross = hours ? Math.round((hours.expectedFromShifts + travel + monthlyBase) * 100) / 100 : 0;
   const comparison = gross !== '' && !isNaN(Number(gross)) ? comparePayslip(expectedGross, Number(gross)) : null;
 
-  const dialogClientSummary = data?.summary?.byClient.find(c => c.clientId === dialogClientId) ?? null;
-  const dialogClient = data?.clients.find(c => c.id === dialogClientId) ?? null;
+  const paymentsTotal = (data?.payments ?? []).reduce((s, p) => s + Number(p.amount), 0);
+
+  async function deletePayment(id: string) {
+    const res = await fetch(`/api/payments/${id}`, { method: 'DELETE' });
+    if (res.ok) load();
+  }
 
   return (
     <>
@@ -241,10 +246,38 @@ export default function MonthlyPage() {
             </div>
             <MonthlySummaryTable
               clientSummaries={data.summary?.byClient ?? []}
-              onGenerateReceipt={cid => setDialogClientId(cid)}
               year={year}
               month={month}
             />
+
+            <div className="border-t border-rule pt-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-[15px]">תקבולים החודש</h3>
+                <Money amount={paymentsTotal} className="wm-num text-brass" />
+              </div>
+              {data.payments.length === 0 ? (
+                <p className="text-[13px] text-text-mute">לא נרשם כסף שהתקבל החודש.</p>
+              ) : (
+                <ul className="divide-y divide-rule">
+                  {data.payments.map(p => (
+                    <li key={p.id} className="min-h-11 py-2 flex items-center gap-2 text-[15px]">
+                      <span className="text-[13px] text-text-mute w-10 shrink-0">{formatShortDate(p.received_date)}</span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block truncate">{p.client?.name}</span>
+                        <span className="block text-[13px] text-text-mute">
+                          {methodLabel(p.method)}
+                          {p.external_receipt_no ? ` · קבלה ${p.external_receipt_no}` : ''}
+                        </span>
+                      </span>
+                      <Money amount={Number(p.amount)} className="wm-num" />
+                      <button onClick={() => deletePayment(p.id)} aria-label={`מחק תקבול מ${p.client?.name ?? 'לקוח'}`}
+                        className="wm-btn text-text-mute text-[13px]">מחק</button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <button onClick={() => setPaymentOpen(true)} className="wm-btn wm-btn-brass w-full">התקבל תשלום</button>
+            </div>
           </section>
         </div>
       )}
@@ -260,20 +293,12 @@ export default function MonthlyPage() {
         />
       )}
 
-      {dialogClientId && dialogClientSummary && dialogClient && (
-        <GenerateReceiptDialog
-          clientSummary={dialogClientSummary}
-          clientId={dialogClientId}
-          year={year}
-          month={month}
-          hourlyRate={dialogClient.hourly_rate}
-          onClose={() => setDialogClientId(null)}
-          onSuccess={receiptId => {
-            setDialogClientId(null);
-            router.push(`/receipts/${receiptId}`);
-          }}
-        />
-      )}
+      <PaymentSheet
+        open={paymentOpen}
+        onClose={() => setPaymentOpen(false)}
+        onSaved={() => load()}
+        clients={data?.clients ?? []}
+      />
     </>
   );
 }

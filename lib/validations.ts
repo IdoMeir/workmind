@@ -70,18 +70,6 @@ export const userSettingsSchema = z.object({
   salary_annual_income: z.number().min(0),
 });
 
-export const generateReceiptSchema = z.object({
-  client_id: z.string().uuid(),
-  year: z.number().int().min(2020).max(2100),
-  month: z.number().int().min(1).max(12),
-  notes: z.string().max(1000).optional(),
-  custom_line_items: z.array(z.object({
-    description: z.string(),
-    quantity: z.number().positive(),
-    unit_price: z.number().positive(),
-    total: z.number().positive(),
-  })).optional(),
-});
 
 // ─── v2: מעסיק, משמרות, תלושים, תקבולים ──────────────────────
 

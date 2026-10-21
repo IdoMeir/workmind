@@ -19,7 +19,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
   if (error || !data) notFound();
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6 px-4">
+    <div className="min-h-screen py-6 px-4">
       <ReceiptPrintView receipt={data as Receipt} />
     </div>
   );

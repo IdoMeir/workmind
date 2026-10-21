@@ -165,8 +165,20 @@ button, a {
 }
 
 @media print {
+  /* מסמך מודפס: שחור על לבן, גם כשהמסך כהה. */
+  *,
+  *::before,
+  *::after {
+    color: #000 !important;
+    background: transparent !important;
+    border-color: #999 !important;
+  }
+  html,
   body {
-    background: white;
+    background: #fff !important;
+  }
+  .receipt-print {
+    border: none !important;
   }
   .no-print,
   nav,

@@ -56,22 +56,3 @@ ${clientsText}
   const textBlock = response.content.find(b => b.type === 'text');
   return textBlock?.type === 'text' ? textBlock.text : '';
 }
-
-export async function suggestReceiptDescription(eventName: string): Promise<string> {
-  const prompt = `הלקוח כתב לקבלה שם של אירוע: "${eventName}".
-נסח עבורו שורה מקצועית אחת בעברית שתופיע כתיאור בקבלה. שורה אחת בלבד, ענייני, ללא הסברים נוספים.
-דוגמאות לסגנון רצוי:
-- "הפקת אירוע חתונה, 15.6.2026"
-- "ניהול הפקה — אירוע חברה ספטמבר 2026"
-
-החזר רק את השורה עצמה, ללא מרכאות וללא טקסט נוסף.`;
-
-  const response = await client.messages.create({
-    model: MODEL,
-    max_tokens: 150,
-    messages: [{ role: 'user', content: prompt }],
-  });
-
-  const textBlock = response.content.find(b => b.type === 'text');
-  return textBlock?.type === 'text' ? textBlock.text.trim() : eventName;
-}

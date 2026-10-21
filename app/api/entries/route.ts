@@ -34,6 +34,11 @@ export async function GET(request: NextRequest) {
     query = query.eq('client_id', clientId);
   }
 
+  // עבודות פתוחות: לא שולמו ולא נכללו בקבלה ישנה.
+  if (searchParams.get('open') === '1') {
+    query = query.is('payment_id', null).is('receipt_id', null);
+  }
+
   const limit = searchParams.get('limit');
   if (limit) {
     query = query.limit(Number(limit));

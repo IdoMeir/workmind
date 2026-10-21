@@ -1,67 +1,97 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import PageHeader from '@/components/shared/PageHeader';
-import { formatCurrency, formatHebrewDate, formatHebrewMonthYear } from '@/lib/hebrew-format';
-import type { Receipt } from '@/types';
+import Money from '@/components/shared/Money';
+import PaymentSheet, { type PaymentPreset } from '@/components/payments/PaymentSheet';
+import { formatHebrewDate, formatHebrewMonthYear } from '@/lib/hebrew-format';
+import type { Client, Payment, Receipt } from '@/types';
+
+type ReceiptRow = Receipt & { client?: { name: string } };
 
 export default function ReceiptsPage() {
-  const [receipts, setReceipts] = useState<(Receipt & { client?: { name: string } })[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [receipts, setReceipts] = useState<ReceiptRow[] | null>(null);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [preset, setPreset] = useState<PaymentPreset | null>(null);
 
-  useEffect(() => {
-    fetch('/api/receipts')
-      .then(r => r.json())
-      .then(data => { setReceipts(data); setLoading(false); })
-      .catch(() => setLoading(false));
+  const load = useCallback(async () => {
+    const [r, p, c] = await Promise.all([
+      fetch('/api/receipts').then(res => (res.ok ? res.json() : [])).catch(() => []),
+      fetch('/api/payments').then(res => (res.ok ? res.json() : [])).catch(() => []),
+      fetch('/api/clients').then(res => (res.ok ? res.json() : [])).catch(() => []),
+    ]);
+    setReceipts(r);
+    setPayments(p);
+    setClients(c);
   }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const recorded = new Set(payments.map(p => p.receipt_id).filter(Boolean));
 
   return (
     <>
-      <PageHeader title="קבלות" />
+      <PageHeader title="קבלות שהוצאו" subtitle="לצפייה בלבד. קבלות חדשות מופקות בתוכנה רשומה." backHref="/more" />
 
       <div className="p-4 space-y-3">
-        {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="bg-white rounded-xl border border-gray-200 h-20 animate-pulse" />
-            ))}
+        {receipts === null ? (
+          <div className="space-y-3" aria-busy="true" aria-label="טוען">
+            {[1, 2, 3].map(i => <div key={i} className="wm-card h-24 animate-pulse" />)}
           </div>
         ) : receipts.length === 0 ? (
-          <div className="text-center py-16 text-gray-400">
-            <div className="text-4xl mb-3">🧾</div>
-            <div className="font-medium text-gray-600">אין קבלות עדיין</div>
-            <div className="text-sm mt-1">הפק קבלה ממסך הסיכום החודשי</div>
-          </div>
+          <p className="text-[15px] text-text-mute py-8 text-center">לא הוצאו קבלות מ-WorkMind.</p>
         ) : (
           receipts.map(receipt => (
-            <Link
-              key={receipt.id}
-              href={`/receipts/${receipt.id}`}
-              className="block bg-white rounded-xl border border-gray-200 px-4 py-3 hover:border-indigo-300 hover:shadow-sm transition-all active:bg-gray-50"
-            >
-              <div className="flex justify-between items-start">
-                <div>
-                  <div className="font-semibold text-gray-900">
-                    {receipt.client?.name ?? receipt.client_snapshot.name}
+            <article key={receipt.id} className="wm-card">
+              <Link href={`/receipts/${receipt.id}`} className="block px-4 py-3">
+                <div className="flex justify-between items-start gap-3">
+                  <div>
+                    <h2 className="text-[15px] text-text">{receipt.client?.name ?? receipt.client_snapshot.name}</h2>
+                    <p className="text-[13px] text-text-mute">
+                      {formatHebrewMonthYear(receipt.period_month, receipt.period_year)} · הוצאה {formatHebrewDate(receipt.issue_date)}
+                    </p>
                   </div>
-                  <div className="text-sm text-gray-500 mt-0.5">
-                    {formatHebrewMonthYear(receipt.period_month, receipt.period_year)}
+                  <div className="text-end">
+                    <Money amount={Number(receipt.total_amount)} className="wm-num text-brass" />
+                    <p className="text-[13px] text-text-mute"><bdi>{receipt.receipt_number}</bdi></p>
                   </div>
                 </div>
-                <div className="text-left">
-                  <div className="font-bold text-indigo-700">{formatCurrency(receipt.total_amount)}</div>
-                  <div className="text-xs text-gray-400 mt-0.5 font-mono">{receipt.receipt_number}</div>
-                </div>
+                {receipt.internal_note && (
+                  <p className="mt-2 text-[13px] text-alert">הערה פנימית: {receipt.internal_note}</p>
+                )}
+              </Link>
+              <div className="px-4 pb-3">
+                {recorded.has(receipt.id) ? (
+                  <p className="text-[13px] text-sage min-h-11 flex items-center">נרשם כתקבול</p>
+                ) : (
+                  <button
+                    onClick={() => setPreset({
+                      clientId: receipt.client_id,
+                      amount: Number(receipt.total_amount),
+                      date: receipt.issue_date,
+                      receiptId: receipt.id,
+                      receiptNumber: receipt.receipt_number,
+                    })}
+                    className="wm-btn wm-btn-ghost w-full"
+                  >
+                    רשום כתקבול
+                  </button>
+                )}
               </div>
-              <div className="text-xs text-gray-400 mt-2">
-                הופקה: {formatHebrewDate(receipt.issue_date)}
-              </div>
-            </Link>
+            </article>
           ))
         )}
       </div>
+
+      <PaymentSheet
+        open={preset !== null}
+        onClose={() => setPreset(null)}
+        onSaved={() => load()}
+        clients={clients}
+        preset={preset}
+      />
     </>
   );
 }
