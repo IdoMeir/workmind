@@ -26,6 +26,8 @@ export interface EmployerRules {
   ot_daily_threshold: number;
   ot_short_day_threshold: number;
   ot_weekly_threshold: number;
+  /** תעריף קבוע לשעה נוספת (₪). null = לפי אחוזים (125%/150%). */
+  ot_flat_rate: number | null;
 }
 
 export interface ShiftInput {
@@ -193,10 +195,48 @@ export function shiftPay(b: ShiftBreakdown, rules: EmployerRules): number {
   const [conv125, conv150] = splitOvertime(b.weeklyConverted);
   const daily125 = b.h125 - conv125;
   const daily150 = b.h150 - conv150;
+
+  if (rules.ot_flat_rate) {
+    // תעריף קבוע: כל שעה נוספת יומית (125 וגם 150) = התעריף הקבוע.
+    // שעה שהומרה בגלל הסף השבועי כבר שולמה בבסיס — מקבלת רק את ההפרש מעל התעריף השקול.
+    const flat = rules.ot_flat_rate;
+    return round2(base + (daily125 + daily150) * flat + b.weeklyConverted * Math.max(0, flat - he));
+  }
+
   const premium =
     conv125 * (OT_RATE_1 - 1) + conv150 * (OT_RATE_2 - 1) + daily125 * OT_RATE_1 + daily150 * OT_RATE_2;
 
   return round2(base + premium * he);
+}
+
+export interface FlatRateWarnings {
+  /** התעריף הקבוע נמוך מ-125% מהתעריף השקול. */
+  below125: boolean;
+  /** התעריף הקבוע נמוך מ-150% מהתעריף השקול (נדרש משעה נוספת שלישית). */
+  below150: boolean;
+}
+
+/** בדיקת התעריף הקבוע מול המינימום בחוק. לא חוסם — רק אזהרה. */
+export function flatRateWarnings(rules: EmployerRules): FlatRateWarnings {
+  const he = hourlyEquivalent(rules);
+  const flat = rules.ot_flat_rate;
+  if (!flat || he <= 0) return { below125: false, below150: false };
+  return { below125: flat < he * OT_RATE_1 - 0.005, below150: flat < he * OT_RATE_2 - 0.005 };
+}
+
+/** אזהרה למשמרת מסוימת: רק כשיש בה שעות נוספות יומיות באותה מדרגה. */
+export function shiftFlatRateWarning(b: ShiftBreakdown, rules: EmployerRules): '125' | '150' | null {
+  const w = flatRateWarnings(rules);
+  const [conv125, conv150] = splitOvertime(b.weeklyConverted);
+  if (w.below125 && b.h125 - conv125 > 0) return '125';
+  if (w.below150 && b.h150 - conv150 > 0) return '150';
+  return null;
+}
+
+/** שעות נוספות יומיות (לא כולל המרה שבועית) — לתצוגה "שעות נוספות: 1.5 × 75 ₪". */
+export function dailyOvertimeHours(b: ShiftBreakdown): number {
+  const [conv125, conv150] = splitOvertime(b.weeklyConverted);
+  return round2(b.h125 - conv125 + b.h150 - conv150);
 }
 
 /** האם תעריף השעה השקול נמוך משכר המינימום. */

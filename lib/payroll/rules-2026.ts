@@ -38,6 +38,7 @@ export const EMPLOYER_DEFAULTS = {
   ot_daily_threshold: WORKWEEK_DEFAULTS[5].dailyThreshold,
   ot_short_day_threshold: WORKWEEK_DEFAULTS[5].shortDayThreshold,
   ot_weekly_threshold: WEEKLY_THRESHOLD,
+  ot_flat_rate: null,
 } as const;
 
 /** שעת התחלה כשאין עדיין "יום רגיל" קודם. */

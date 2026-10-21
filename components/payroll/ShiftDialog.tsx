@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import Sheet from '@/components/shared/Sheet';
 import Money from '@/components/shared/Money';
-import { addDays, computeWeek, regularDayTemplate, shiftPay, weekStart } from '@/lib/payroll/overtime';
+import CalendarTag from '@/components/payroll/CalendarTag';
+import { addDays, computeWeek, dailyOvertimeHours, regularDayTemplate, shiftFlatRateWarning, shiftPay, weekStart } from '@/lib/payroll/overtime';
 import { toRules } from '@/lib/payroll/employer';
 import { formatDayAndDate, formatDecimal, formatHours, todayISO } from '@/lib/hebrew-format';
 import { track } from '@/lib/events';
@@ -142,6 +143,12 @@ export default function ShiftDialog({ open, onClose, onSaved, onDeleted, employe
         </div>
       }
     >
+      {shift?.calendar_event_id && (
+        <p className="text-[13px] text-text-mute">
+          <CalendarTag /> המשמרת נכנסה מהיומן. שמירה כאן תנתק אותה מהיומן, כדי שהעדכון הבא לא ידרוס את התיקון.
+        </p>
+      )}
+
       <button type="button" onClick={fillRegularDay} className="wm-btn wm-btn-ghost w-full">
         יום רגיל
       </button>
@@ -184,6 +191,17 @@ export default function ShiftDialog({ open, onClose, onSaved, onDeleted, employe
               ? `מנוחה ${formatDecimal(b.rest)} · 187.5% ${formatDecimal(b.restOt1)} · 225% ${formatDecimal(b.restOt2)}`
               : `רגילות ${formatDecimal(b.regular)} · 125% ${formatDecimal(b.h125)} · 150% ${formatDecimal(b.h150)}`}
           </p>
+          {rules.ot_flat_rate && !isRest && dailyOvertimeHours(b) > 0 && (
+            <p className="text-[15px]">
+              שעות נוספות: <bdi className="wm-num">{formatDecimal(dailyOvertimeHours(b))}</bdi> × <Money amount={rules.ot_flat_rate} context="לשעה" />
+            </p>
+          )}
+          {!isRest && shiftFlatRateWarning(b, rules) === '125' && (
+            <p className="text-[13px] text-alert">התעריף נמוך מהמינימום בחוק לשעות נוספות (125%)</p>
+          )}
+          {!isRest && shiftFlatRateWarning(b, rules) === '150' && (
+            <p className="text-[13px] text-alert">משעה נוספת שלישית החוק דורש 150%</p>
+          )}
           {b.weeklyConverted > 0 && (
             <p className="text-[13px] text-text-mute">{formatDecimal(b.weeklyConverted)} שעות מעל הסף השבועי</p>
           )}

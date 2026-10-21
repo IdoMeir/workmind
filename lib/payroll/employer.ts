@@ -16,5 +16,6 @@ export function toRules(e: Employer): EmployerRules {
     ot_daily_threshold: Number(e.ot_daily_threshold),
     ot_short_day_threshold: Number(e.ot_short_day_threshold),
     ot_weekly_threshold: Number(e.ot_weekly_threshold),
+    ot_flat_rate: e.ot_flat_rate !== null && e.ot_flat_rate !== undefined ? Number(e.ot_flat_rate) : null,
   };
 }

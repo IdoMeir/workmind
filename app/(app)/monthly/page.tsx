@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import MonthlySummaryTable from '@/components/receipts/MonthlySummaryTable';
 import PaymentSheet from '@/components/payments/PaymentSheet';
 import ShiftDialog from '@/components/payroll/ShiftDialog';
+import CalendarTag from '@/components/payroll/CalendarTag';
 import Money from '@/components/shared/Money';
 import { BusinessIcon, SalaryIcon } from '@/components/shared/SourceIcon';
 import { formatDecimal, formatHebrewMonthYear, formatHours, formatShortDate, getCurrentMonthYear } from '@/lib/hebrew-format';
@@ -226,7 +227,7 @@ export default function MonthlyPage() {
                           className="w-full min-h-11 py-2 flex items-center gap-2 text-start text-[15px]">
                           <span className="text-[13px] text-text-mute w-10 shrink-0">{formatShortDate(s.shift_date)}</span>
                           <bdi className="text-text-mute">{s.start_time.slice(0, 5)}–{s.end_time.slice(0, 5)}</bdi>
-                          <span className="flex-1"><bdi className="wm-num">{formatHours(shiftHours(s))}</bdi> ש׳{s.is_rest_day ? ' · מנוחה' : ''}</span>
+                          <span className="flex-1"><bdi className="wm-num">{formatHours(shiftHours(s))}</bdi> ש׳{s.is_rest_day ? ' · מנוחה' : ''}{s.calendar_event_id && <CalendarTag />}</span>
                           <Money amount={Number(s.expected_amount ?? 0)} className="wm-num text-steel" />
                         </button>
                       </li>

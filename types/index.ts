@@ -160,6 +160,8 @@ export interface Employer {
   ot_daily_threshold: number;
   ot_short_day_threshold: number;
   ot_weekly_threshold: number;
+  /** תעריף קבוע לשעה נוספת. null = לפי אחוזים. */
+  ot_flat_rate: number | null;
   travel_per_day: number | null;
   has_existing_pension: boolean | null;
   created_at: string;
@@ -182,6 +184,8 @@ export interface Shift {
   hours_rest_ot_2: number;
   expected_amount: number | null;
   note: string | null;
+  /** משמרת שנכנסה מהיומן. מתאפס כשעורכים באפליקציה. */
+  calendar_event_id: string | null;
   created_at: string;
 }
 

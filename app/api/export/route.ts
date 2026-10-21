@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { ensureShiftsComputedForUser } from '@/lib/payroll/server';
 
 const csvCell = (v: unknown) => {
   const s = v === null || v === undefined ? '' : String(v);
@@ -14,6 +15,15 @@ export async function GET(request: NextRequest) {
 
   const year = parseInt(request.nextUrl.searchParams.get('year') ?? String(new Date().getFullYear()));
   const from = `${year}-01-01`, to = `${year}-12-31`;
+
+  // משמרות מהיומן שעוד לא חושבו — מחשבים לפני הייצוא.
+  const { data: pending } = await supabase.from('wm_shifts').select('employer_id, shift_date, expected_amount')
+    .eq('user_id', user.id).gte('shift_date', from).lte('shift_date', to).is('expected_amount', null);
+  try {
+    await ensureShiftsComputedForUser(supabase, user.id, pending ?? []);
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+  }
 
   const [shifts, entries, payments] = await Promise.all([
     supabase.from('wm_shifts').select('*, employer:wm_employers(name)').eq('user_id', user.id)

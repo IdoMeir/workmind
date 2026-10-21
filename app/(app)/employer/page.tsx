@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import PageHeader from '@/components/shared/PageHeader';
 import Money from '@/components/shared/Money';
 import { EMPLOYER_DEFAULTS, MIN_WAGE_HOURLY, WORKWEEK_DEFAULTS } from '@/lib/payroll/rules-2026';
-import { hourlyEquivalent, isBelowMinimumWage } from '@/lib/payroll/overtime';
+import { flatRateWarnings, hourlyEquivalent, isBelowMinimumWage } from '@/lib/payroll/overtime';
 import { toRules } from '@/lib/payroll/employer';
 import { DAY_NAMES } from '@/lib/hebrew-format';
 import type { Employer, PayType } from '@/types';
@@ -76,6 +76,10 @@ export default function EmployerPage() {
     setSaving(true);
     setMessage(null);
     try {
+      if (form.ot_flat_rate !== null && !(form.ot_flat_rate > 0)) {
+        setMessage({ ok: false, text: 'הכנס תעריף לשעה נוספת, או בחר "לפי אחוזים"' });
+        return;
+      }
       const res = await fetch(employer ? `/api/employers/${employer.id}` : '/api/employers', {
         method: employer ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -95,6 +99,8 @@ export default function EmployerPage() {
   const rules = toRules({ ...form, id: '', user_id: '', created_at: '' } as Employer);
   const he = hourlyEquivalent(rules);
   const belowMin = isBelowMinimumWage(rules);
+  const otWarn = flatRateWarnings(rules);
+  const flatMode = form.ot_flat_rate !== null;
 
   return (
     <>
@@ -172,6 +178,37 @@ export default function EmployerPage() {
                   onChange={e => set('short_day_paid_full', e.target.checked)} />
                 <span>יום קצר משולם כיום מלא</span>
               </label>
+            )}
+          </section>
+
+          <section className="wm-card p-4 space-y-3" aria-labelledby="emp-ot">
+            <fieldset>
+              <legend id="emp-ot" className="wm-label">תשלום על שעה נוספת</legend>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => set('ot_flat_rate', null)} aria-pressed={!flatMode}
+                  className={`wm-btn ${!flatMode ? 'wm-btn-steel' : 'wm-btn-ghost'}`}>
+                  לפי אחוזים (125%/150%)
+                </button>
+                <button type="button" onClick={() => set('ot_flat_rate', form.ot_flat_rate ?? 0)} aria-pressed={flatMode}
+                  className={`wm-btn ${flatMode ? 'wm-btn-steel' : 'wm-btn-ghost'}`}>
+                  תעריף קבוע לשעה נוספת
+                </button>
+              </div>
+            </fieldset>
+            {flatMode && (
+              <div>
+                <label htmlFor="emp-ot-flat" className="wm-label">תעריף לשעה נוספת (₪)</label>
+                <input id="emp-ot-flat" type="number" inputMode="decimal" min="0" step="any" className="wm-field"
+                  value={form.ot_flat_rate ? form.ot_flat_rate : ''}
+                  onChange={e => set('ot_flat_rate', e.target.value === '' ? 0 : Number(e.target.value))} />
+                <p className="text-[13px] text-text-mute mt-1">ביום מנוחה החישוב נשאר לפי אחוזים.</p>
+              </div>
+            )}
+            {flatMode && otWarn.below125 && (
+              <p role="alert" className="wm-error">התעריף נמוך מהמינימום בחוק לשעות נוספות (125%)</p>
+            )}
+            {flatMode && !otWarn.below125 && otWarn.below150 && (
+              <p role="alert" className="wm-error">משעה נוספת שלישית החוק דורש 150%</p>
             )}
           </section>
 

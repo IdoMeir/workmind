@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Employer, Shift } from '@/types';
 import { addDays, computeWeek, shiftPay, weekStart } from './overtime';
 import { toRules } from './employer';
+import { ensureShiftsComputed } from './lazy-recompute';
 
 /**
  * השעות הנוספות השבועיות תלויות בכל משמרות השבוע, ולכן אחרי כל שמירה או מחיקה
@@ -52,4 +53,16 @@ export async function getEmployer(supabase: SupabaseClient, userId: string, empl
     .eq('user_id', userId)
     .single();
   return (data as Employer) ?? null;
+}
+
+/** חישוב בעצלות של משמרות שנכנסו מבחוץ (expected_amount = NULL). מחזיר true אם חושב משהו. */
+export async function ensureShiftsComputedForUser(
+  supabase: SupabaseClient,
+  userId: string,
+  shifts: Pick<Shift, 'employer_id' | 'shift_date' | 'expected_amount'>[]
+): Promise<boolean> {
+  return ensureShiftsComputed(shifts, {
+    getEmployer: id => getEmployer(supabase, userId, id),
+    recomputeWeek: (employer, date) => recomputeWeek(supabase, userId, employer, date),
+  });
 }

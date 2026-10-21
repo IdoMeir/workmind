@@ -9,6 +9,7 @@ import { BusinessIcon, SalaryIcon } from '@/components/shared/SourceIcon';
 import ShiftDialog from '@/components/payroll/ShiftDialog';
 import QuickAddHoursDialog from '@/components/entries/QuickAddHoursDialog';
 import SelfStatusCard from '@/components/today/SelfStatusCard';
+import CalendarTag from '@/components/payroll/CalendarTag';
 import { formatDecimal, formatHebrewMonth, formatHours, formatShortDate, getCurrentMonthYear, todayISO } from '@/lib/hebrew-format';
 import { dayOfWeek } from '@/lib/payroll/overtime';
 import { buildTaxTasks, nextDeadlineTask } from '@/lib/tax/tasks';
@@ -288,6 +289,7 @@ export default function TodayPage() {
                       {data.employer?.name ?? 'משמרת'} <bdi className="wm-num">{formatHours(shiftHours(item.shift))}</bdi> ש׳
                       {Number(item.shift.hours_125) + Number(item.shift.hours_150) > 0 && <span className="text-text-mute"> · נוספות</span>}
                       {item.shift.is_rest_day && <span className="text-text-mute"> · מנוחה</span>}
+                      {item.shift.calendar_event_id && <CalendarTag />}
                     </span>
                     <Money amount={Number(item.shift.expected_amount ?? 0)} className="wm-num text-steel" />
                   </button>

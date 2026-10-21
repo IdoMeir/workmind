@@ -103,6 +103,7 @@ export const employerSchema = z.object({
   ot_daily_threshold: z.number().positive().max(24),
   ot_short_day_threshold: z.number().positive().max(24),
   ot_weekly_threshold: z.number().positive().max(168),
+  ot_flat_rate: z.number().positive().nullable().optional(),
   travel_per_day: money.optional().nullable(),
   has_existing_pension: z.boolean().optional().nullable(),
 }).refine(

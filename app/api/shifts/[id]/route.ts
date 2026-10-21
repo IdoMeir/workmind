@@ -25,7 +25,12 @@ export async function PATCH(
   const employer = await getEmployer(supabase, user.id, parsed.data.employer_id);
   if (!employer) return NextResponse.json({ error: 'מעסיק לא נמצא' }, { status: 404 });
 
-  const { error } = await supabase.from('wm_shifts').update(parsed.data).eq('id', id).eq('user_id', user.id);
+  // עריכה באפליקציה מנתקת את המשמרת מהיומן, כדי שהמשימה המתוזמנת לא תדרוס את התיקון.
+  const { error } = await supabase
+    .from('wm_shifts')
+    .update({ ...parsed.data, calendar_event_id: null })
+    .eq('id', id)
+    .eq('user_id', user.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   try {

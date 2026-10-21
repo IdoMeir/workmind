@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { shiftSchema } from '@/lib/validations';
-import { getEmployer, recomputeWeek } from '@/lib/payroll/server';
+import { ensureShiftsComputedForUser, getEmployer, recomputeWeek } from '@/lib/payroll/server';
 import { getDateRange } from '@/lib/hebrew-format';
 
 /** GET ?year=&month= | ?from=&to= | ?limit= (האחרונות) */
@@ -11,26 +11,39 @@ export async function GET(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const sp = request.nextUrl.searchParams;
-  let query = supabase
-    .from('wm_shifts')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('shift_date', { ascending: false })
-    .order('start_time', { ascending: false });
+  const buildQuery = () => {
+    let query = supabase
+      .from('wm_shifts')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('shift_date', { ascending: false })
+      .order('start_time', { ascending: false });
 
-  const year = sp.get('year'), month = sp.get('month');
-  if (year && month) {
-    const { from, to } = getDateRange(Number(year), Number(month));
-    query = query.gte('shift_date', from).lte('shift_date', to);
-  } else if (year) {
-    query = query.gte('shift_date', `${year}-01-01`).lte('shift_date', `${year}-12-31`);
-  }
-  if (sp.get('from')) query = query.gte('shift_date', sp.get('from')!);
-  if (sp.get('to')) query = query.lte('shift_date', sp.get('to')!);
-  if (sp.get('limit')) query = query.limit(Number(sp.get('limit')));
+    const year = sp.get('year'), month = sp.get('month');
+    if (year && month) {
+      const { from, to } = getDateRange(Number(year), Number(month));
+      query = query.gte('shift_date', from).lte('shift_date', to);
+    } else if (year) {
+      query = query.gte('shift_date', `${year}-01-01`).lte('shift_date', `${year}-12-31`);
+    }
+    if (sp.get('from')) query = query.gte('shift_date', sp.get('from')!);
+    if (sp.get('to')) query = query.lte('shift_date', sp.get('to')!);
+    if (sp.get('limit')) query = query.limit(Number(sp.get('limit')));
+    return query;
+  };
 
-  const { data, error } = await query;
+  let { data, error } = await buildQuery();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // משמרות שנכנסו מהיומן (expected_amount = NULL) מחושבות לפני שמחזירים — כל המסכים קוראים מכאן.
+  try {
+    if (await ensureShiftsComputedForUser(supabase, user.id, data ?? [])) {
+      ({ data, error } = await buildQuery());
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+  }
   return NextResponse.json(data);
 }
 
