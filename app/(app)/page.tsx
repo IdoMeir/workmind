@@ -8,9 +8,13 @@ import Money from '@/components/shared/Money';
 import { BusinessIcon, SalaryIcon } from '@/components/shared/SourceIcon';
 import ShiftDialog from '@/components/payroll/ShiftDialog';
 import QuickAddHoursDialog from '@/components/entries/QuickAddHoursDialog';
+import SelfStatusCard from '@/components/today/SelfStatusCard';
 import { formatDecimal, formatHebrewMonth, formatHours, formatShortDate, getCurrentMonthYear, todayISO } from '@/lib/hebrew-format';
 import { dayOfWeek } from '@/lib/payroll/overtime';
 import { buildTaxTasks, nextDeadlineTask } from '@/lib/tax/tasks';
+import { businessActivity } from '@/lib/tax/status';
+import { SELF_STATUS_WINDOW_DAYS } from '@/lib/tax/constants-2026';
+import { addDays } from '@/lib/payroll/overtime';
 
 interface TodayData {
   settings: UserSettings | null;
@@ -20,6 +24,8 @@ interface TodayData {
   monthEntries: WorkEntry[];
   recentShifts: Shift[];
   recentEntries: WorkEntry[];
+  /** עבודות העסק ב-91 הימים האחרונים — לאינדיקטור עצמאי. */
+  activityEntries: WorkEntry[];
 }
 
 type RecentItem =
@@ -54,7 +60,8 @@ export default function TodayPage() {
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
-    const [settings, employers, clients, monthShifts, monthEntries, recentShifts, recentEntries] = await Promise.all([
+    const windowFrom = addDays(todayISO(), -(SELF_STATUS_WINDOW_DAYS - 1));
+    const [settings, employers, clients, monthShifts, monthEntries, recentShifts, recentEntries, activityEntries] = await Promise.all([
       getJson<UserSettings | null>('/api/settings', null),
       getJson<Employer[]>('/api/employers', []),
       getJson<Client[]>('/api/clients', []),
@@ -62,6 +69,7 @@ export default function TodayPage() {
       getJson<WorkEntry[]>(`/api/entries?year=${year}&month=${month}`, []),
       getJson<Shift[]>('/api/shifts?limit=5', []),
       getJson<WorkEntry[]>('/api/entries?limit=5', []),
+      getJson<WorkEntry[]>(`/api/entries?from=${windowFrom}&to=${todayISO()}`, []),
     ]);
     setData({
       settings,
@@ -71,6 +79,7 @@ export default function TodayPage() {
       monthEntries,
       recentShifts,
       recentEntries,
+      activityEntries,
     });
   }, [year, month]);
 
@@ -236,6 +245,9 @@ export default function TodayPage() {
         )}
         {error && <p role="alert" className="wm-error">{error}</p>}
       </section>
+
+      {/* עצמאי לפי ב"ל */}
+      {data.clients.length > 0 && <SelfStatusCard activity={businessActivity(data.activityEntries, today)} />}
 
       {/* אחרונים */}
       {recent.length > 0 && (

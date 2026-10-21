@@ -30,6 +30,11 @@ export async function GET(request: NextRequest) {
       .lte('entry_date', `${year}-12-31`);
   }
 
+  const fromDate = searchParams.get('from');
+  const toDate = searchParams.get('to');
+  if (fromDate) query = query.gte('entry_date', fromDate);
+  if (toDate) query = query.lte('entry_date', toDate);
+
   if (clientId) {
     query = query.eq('client_id', clientId);
   }

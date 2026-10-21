@@ -76,3 +76,6 @@ export const DEADLINE_ALERT_DAYS = 14;
 
 /** פס תקרת העסק הזעיר מוצג רק מעל היחס הזה (מפרט סעיף 3, 10). */
 export const CEILING_DISPLAY_RATIO = 0.70;
+
+/** חלון לחישוב ממוצע שעות והכנסה לסיווג "עצמאי": 13 שבועות ≈ 3 חודשים. */
+export const SELF_STATUS_WINDOW_DAYS = 91;
