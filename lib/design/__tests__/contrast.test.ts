@@ -37,12 +37,21 @@ describe('text-faint — אייקונים בלבד', () => {
     expect(contrastRatio(colors['text-faint'], colors['ink-raised'])).toBeGreaterThanOrEqual(2.8);
   });
 
-  it('לא משמש לטקסט באף קומפוננטה', async () => {
+  it('לא משמש לטקסט באף קומפוננטה — רק על אלמנט aria-hidden (אייקון)', async () => {
     const { globSync } = await import('node:fs');
     const root = join(__dirname, '../../..');
     const files = globSync(['app/**/*.tsx', 'components/**/*.tsx'], { cwd: root });
-    const offenders = files.filter(f => readFileSync(join(root, f), 'utf-8').includes('text-text-faint'));
-    // שימוש מותר רק על אייקון (aria-hidden). כרגע אין שימוש בכלל; כשיתווסף — לבדוק ידנית.
+    const offenders: string[] = [];
+    for (const f of files) {
+      const src = readFileSync(join(root, f), 'utf-8');
+      let i = src.indexOf('text-text-faint');
+      while (i !== -1) {
+        // התגית שמכילה את המחלקה: מה-< האחרון לפני ועד ה-> הבא.
+        const tag = src.slice(src.lastIndexOf('<', i), src.indexOf('>', i) + 1);
+        if (!tag.includes('aria-hidden="true"')) offenders.push(`${f}: ${tag.slice(0, 80)}`);
+        i = src.indexOf('text-text-faint', i + 1);
+      }
+    }
     expect(offenders).toEqual([]);
   });
 });

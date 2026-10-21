@@ -2,15 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { Client, WorkEntry, RatePreset } from '@/types';
-import { X } from 'lucide-react';
 import { todayISO } from '@/lib/hebrew-format';
-import { useVisualViewport } from '@/hooks/useVisualViewport';
+import Sheet from '@/components/shared/Sheet';
+import Money from '@/components/shared/Money';
 
 interface QuickAddHoursDialogProps {
   open: boolean;
   onClose: () => void;
   onAdd: (entry: WorkEntry) => void;
   clients: Client[];
+  /** הלקוח האחרון — נבחר אוטומטית, בלי שלב בחירה. */
+  defaultClientId?: string | null;
 }
 
 function parseTimeToMinutes(time: string): number | null {
@@ -33,9 +35,8 @@ function getPresets(client: Client | undefined): RatePreset[] {
   return client?.rate_presets?.filter(p => p.type === 'hourly') ?? [];
 }
 
-export default function QuickAddHoursDialog({ open, onClose, onAdd, clients }: QuickAddHoursDialogProps) {
+export default function QuickAddHoursDialog({ open, onClose, onAdd, clients, defaultClientId }: QuickAddHoursDialogProps) {
   const activeClients = clients.filter(c => c.is_active);
-  const vvh = useVisualViewport();
 
   const [hours, setHours] = useState('');
   const [timeFrom, setTimeFrom] = useState('');
@@ -71,7 +72,7 @@ export default function QuickAddHoursDialog({ open, onClose, onAdd, clients }: Q
       setHours('');
       setTimeFrom('');
       setTimeTo('');
-      setClientId('');
+      setClientId(defaultClientId && clients.some(c => c.id === defaultClientId && c.is_active) ? defaultClientId : '');
       setDescription('');
       setCustomAmount('');
       setShowCustom(false);
@@ -79,9 +80,7 @@ export default function QuickAddHoursDialog({ open, onClose, onAdd, clients }: Q
       setError('');
       setDate(todayISO());
     }
-  }, [open]);
-
-  if (!open) return null;
+  }, [open, defaultClientId, clients]);
 
   // Rate preview
   const hoursNum = parseFloat(hours) || 0;
@@ -93,11 +92,8 @@ export default function QuickAddHoursDialog({ open, onClose, onAdd, clients }: Q
     ? Math.round(hoursNum * effectiveRate * 100) / 100
     : null;
 
-  // Dialog height: JS-measured or CSS fallback
-  const dialogStyle = vvh > 0 ? { maxHeight: `${Math.floor(vvh * 0.92)}px` } : undefined;
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(e?: React.FormEvent) {
+    e?.preventDefault();
     setError('');
     if (!effectiveClientId) { setError('בחר לקוח'); return; }
     if (!hours || parseFloat(hours) <= 0) { setError('הכנס מספר שעות'); return; }
@@ -134,170 +130,114 @@ export default function QuickAddHoursDialog({ open, onClose, onAdd, clients }: Q
       if (!res.ok) { setError(data.error || 'שגיאה'); return; }
       onAdd(data);
       onClose();
+    } catch {
+      setError('שגיאת רשת');
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center pb-above-nav">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-
-      <div
-        className="relative bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-xl flex flex-col max-h-[92dvh] sm:max-h-[85vh]"
-        style={dialogStyle}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
-          <h2 className="text-lg font-semibold">הוסף שעות</h2>
-          <button onClick={onClose} aria-label="סגור" className="min-w-11 min-h-11 inline-flex items-center justify-center text-gray-400 hover:text-gray-600">
-            <X size={20} />
-          </button>
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title="עבודה לעסק"
+      subtitle={selectedClient?.name}
+      footer={
+        <button type="submit" form="add-hours-form" disabled={loading} className="wm-btn wm-btn-brass w-full">
+          {loading ? 'שומר…' : 'שמור'}
+        </button>
+      }
+    >
+      <form id="add-hours-form" onSubmit={handleSubmit} className="space-y-3">
+        <div>
+          <label htmlFor="hours-hours" className="wm-label">שעות</label>
+          <input
+            id="hours-hours"
+            type="number"
+            inputMode="decimal"
+            min="0.25"
+            max="24"
+            step="0.25"
+            value={hours}
+            onChange={e => setHours(e.target.value)}
+            autoFocus
+            className="wm-field wm-num text-[19px]"
+            placeholder="2.5"
+          />
         </div>
 
-        {/* Scrollable fields */}
-        <form id="add-hours-form" onSubmit={handleSubmit} className="overflow-y-auto flex-1 px-5 space-y-3 pb-2">
-
-          {/* Time range — optional, auto-fills hours */}
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">משעה</label>
-              <input
-                type="time"
-                value={timeFrom}
-                onChange={e => setTimeFrom(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">עד שעה</label>
-              <input
-                type="time"
-                value={timeTo}
-                onChange={e => setTimeTo(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
+        {/* Time range — optional, auto-fills hours */}
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">שעות *</label>
-            <input
-              type="number"
-              min="0.25"
-              max="24"
-              step="0.25"
-              value={hours}
-              onChange={e => setHours(e.target.value)}
-              autoFocus
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg font-medium"
-              placeholder="2.5"
-            />
+            <label htmlFor="hours-from" className="wm-label">משעה (רשות)</label>
+            <input id="hours-from" type="time" value={timeFrom} onChange={e => setTimeFrom(e.target.value)} className="wm-field" />
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">לקוח *</label>
-            {activeClients.length === 1 ? (
-              <div className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-gray-50 text-gray-700">
-                {activeClients[0].name}
-              </div>
-            ) : (
-              <select
-                value={clientId}
-                onChange={e => setClientId(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">בחר לקוח...</option>
-                {activeClients.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            )}
+            <label htmlFor="hours-to" className="wm-label">עד שעה</label>
+            <input id="hours-to" type="time" value={timeTo} onChange={e => setTimeTo(e.target.value)} className="wm-field" />
           </div>
-
-          {/* Rate preset selector — shown only when client has hourly presets */}
-          {presets.length > 0 && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">תעריף</label>
-              <select
-                value={selectedPreset}
-                onChange={e => setSelectedPreset(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {selectedClient?.hourly_rate && (
-                  <option value="">ברירת מחדל — ₪{selectedClient.hourly_rate}/שעה</option>
-                )}
-                {presets.map(p => (
-                  <option key={p.name} value={p.name}>{p.name} — ₪{p.rate}/שעה</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">תאריך</label>
-            <input
-              type="date"
-              value={date}
-              onChange={e => setDate(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">הערה</label>
-            <input
-              type="text"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="רשות"
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setShowCustom(v => !v)}
-            className="text-xs text-gray-400 hover:text-gray-600 underline"
-          >
-            {showCustom ? 'הסתר' : 'שנה סכום ידנית'}
-          </button>
-
-          {showCustom && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">סכום ידני (₪)</label>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={customAmount}
-                onChange={e => setCustomAmount(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          )}
-
-          {previewAmount !== null && (
-            <div className="bg-blue-50 rounded-lg px-3 py-2 text-sm text-blue-700 font-medium">
-              סכום מחושב: ₪{previewAmount.toLocaleString()}
-            </div>
-          )}
-
-          {error && <p className="text-red-600 text-sm">{error}</p>}
-        </form>
-
-        {/* Save button — always above keyboard */}
-        <div className="shrink-0 px-5 pt-3 pb-5">
-          <button
-            type="submit"
-            form="add-hours-form"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            {loading ? 'שומר...' : 'שמור'}
-          </button>
         </div>
-      </div>
-    </div>
+
+        {activeClients.length > 1 && (
+          <div>
+            <label htmlFor="hours-client" className="wm-label">לקוח</label>
+            <select id="hours-client" value={clientId} onChange={e => setClientId(e.target.value)} className="wm-field">
+              <option value="">בחר לקוח…</option>
+              {activeClients.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Rate preset selector — shown only when client has hourly presets */}
+        {presets.length > 0 && (
+          <div>
+            <label htmlFor="hours-preset" className="wm-label">תעריף</label>
+            <select id="hours-preset" value={selectedPreset} onChange={e => setSelectedPreset(e.target.value)} className="wm-field">
+              {selectedClient?.hourly_rate && (
+                <option value="">ברירת מחדל — {selectedClient.hourly_rate}₪ לשעה</option>
+              )}
+              {presets.map(p => (
+                <option key={p.name} value={p.name}>{p.name} — {p.rate}₪ לשעה</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div>
+          <label htmlFor="hours-date" className="wm-label">תאריך</label>
+          <input id="hours-date" type="date" value={date} onChange={e => setDate(e.target.value)} className="wm-field" />
+        </div>
+
+        <div>
+          <label htmlFor="hours-note" className="wm-label">הערה</label>
+          <input id="hours-note" type="text" value={description} onChange={e => setDescription(e.target.value)}
+            className="wm-field" placeholder="רשות" />
+        </div>
+
+        <button type="button" onClick={() => setShowCustom(v => !v)} aria-expanded={showCustom}
+          className="min-h-11 text-[13px] text-text-mute underline">
+          {showCustom ? 'הסתר סכום ידני' : 'שנה סכום ידנית'}
+        </button>
+
+        {showCustom && (
+          <div>
+            <label htmlFor="hours-custom" className="wm-label">סכום ידני (₪)</label>
+            <input id="hours-custom" type="number" inputMode="decimal" min="0" step="1" value={customAmount}
+              onChange={e => setCustomAmount(e.target.value)} className="wm-field" />
+          </div>
+        )}
+
+        {previewAmount !== null && (
+          <p className="text-[15px] text-text" aria-live="polite">
+            סכום <Money amount={previewAmount} fractionDigits={2} className="wm-num text-brass" />
+          </p>
+        )}
+
+        {error && <p role="alert" className="wm-error">{error}</p>}
+      </form>
+    </Sheet>
   );
 }

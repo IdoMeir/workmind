@@ -34,6 +34,11 @@ export async function GET(request: NextRequest) {
     query = query.eq('client_id', clientId);
   }
 
+  const limit = searchParams.get('limit');
+  if (limit) {
+    query = query.limit(Number(limit));
+  }
+
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
