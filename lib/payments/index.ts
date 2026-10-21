@@ -52,6 +52,25 @@ export function openWorkEstimate(entries: (Pick<WorkEntry, 'payment_id' | 'recei
   return r2(entries.filter(isOpenEntry).reduce((s, e) => s + Number(e.amount), 0));
 }
 
+/**
+ * תקבולים מאותו לקוח שכנראה כבר משלמים את תקופת הקבלה: התקבלו בחודש התקופה או בחודש שאחריו.
+ * רישום הקבלה כתקבול נוסף יספור את הכסף פעמיים.
+ */
+export function paymentsCoveringReceipt<P extends Pick<Payment, 'client_id' | 'received_date' | 'receipt_id'>>(
+  receipt: { id: string; client_id: string; period_year: number; period_month: number },
+  payments: P[],
+): P[] {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const from = `${receipt.period_year}-${pad(receipt.period_month)}-01`;
+  const nextY = receipt.period_month === 12 ? receipt.period_year + 1 : receipt.period_year;
+  const nextM = receipt.period_month === 12 ? 1 : receipt.period_month + 1;
+  const to = `${nextY}-${pad(nextM)}-31`;
+  return payments.filter(p =>
+    p.client_id === receipt.client_id &&
+    p.receipt_id !== receipt.id &&
+    p.received_date >= from && p.received_date <= to);
+}
+
 /** שעות שקושרו לתקבול (רק רשומות שעות). */
 export function linkedHours(entries: { entry_type: string; hours: number | string | null }[]): number {
   return r2(entries.reduce((s, e) => s + (e.entry_type === 'hours' ? Number(e.hours ?? 0) : 0), 0));

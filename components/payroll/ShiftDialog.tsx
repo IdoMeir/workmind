@@ -6,7 +6,7 @@ import Money from '@/components/shared/Money';
 import CalendarTag from '@/components/payroll/CalendarTag';
 import { addDays, computeWeek, dailyOvertimeHours, regularDayTemplate, shiftFlatRateWarning, shiftPay, weekStart } from '@/lib/payroll/overtime';
 import { toRules } from '@/lib/payroll/employer';
-import { formatDayAndDate, formatDecimal, formatHours, todayISO } from '@/lib/hebrew-format';
+import { formatDayAndDate, formatDecimal, formatHours, formatShortDate, todayISO } from '@/lib/hebrew-format';
 import { track } from '@/lib/events';
 import type { Employer, Shift } from '@/types';
 
@@ -30,18 +30,19 @@ export default function ShiftDialog({ open, onClose, onSaved, onDeleted, employe
   const [history, setHistory] = useState<Shift[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  /** המשמרת שנערכת: מה-prop, או משמרת קיימת שנבחרה במקום לפתוח חדשה. */
+  const [editing, setEditing] = useState<Shift | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const rules = useMemo(() => toRules(employer), [employer]);
 
   useEffect(() => {
     if (!open) return;
     setError('');
+    setConfirmDelete(false);
+    setEditing(shift ?? null);
     if (shift) {
-      setDate(shift.shift_date);
-      setStart(shift.start_time.slice(0, 5));
-      setEnd(shift.end_time.slice(0, 5));
-      setBreakMin(shift.break_minutes);
-      setIsRest(shift.is_rest_day);
+      loadShift(shift);
     } else {
       setDate(todayISO());
       setStart('');
@@ -55,15 +56,32 @@ export default function ShiftDialog({ open, onClose, onSaved, onDeleted, employe
       .catch(() => setHistory([]));
   }, [open, shift, employer.break_minutes]);
 
+  function loadShift(s: Shift) {
+    setDate(s.shift_date);
+    setStart(s.start_time.slice(0, 5));
+    setEnd(s.end_time.slice(0, 5));
+    setBreakMin(s.break_minutes);
+    setIsRest(s.is_rest_day);
+  }
+
+  function editExisting(s: Shift) {
+    setEditing(s);
+    setConfirmDelete(false);
+    loadShift(s);
+  }
+
   // שאר משמרות השבוע — לחישוב חי של הסף השבועי.
   useEffect(() => {
     if (!open || !date) return;
     const from = weekStart(date);
     fetch(`/api/shifts?from=${from}&to=${addDays(from, 6)}`)
       .then(r => (r.ok ? r.json() : []))
-      .then((list: Shift[]) => setWeekShifts(list.filter(s => s.employer_id === employer.id && s.id !== shift?.id)))
+      .then((list: Shift[]) => setWeekShifts(list.filter(s => s.employer_id === employer.id && s.id !== editing?.id)))
       .catch(() => setWeekShifts([]));
-  }, [open, date, employer.id, shift?.id]);
+  }, [open, date, employer.id, editing?.id]);
+
+  // משמרת אחרת אצל אותו מעסיק באותו תאריך.
+  const sameDay = weekShifts.find(s => s.shift_date === date) ?? null;
 
   const preview = useMemo(() => {
     if (!start || !end) return null;
@@ -85,8 +103,8 @@ export default function ShiftDialog({ open, onClose, onSaved, onDeleted, employe
     setSaving(true);
     setError('');
     try {
-      const res = await fetch(shift ? `/api/shifts/${shift.id}` : '/api/shifts', {
-        method: shift ? 'PATCH' : 'POST',
+      const res = await fetch(editing ? `/api/shifts/${editing.id}` : '/api/shifts', {
+        method: editing ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           employer_id: employer.id,
@@ -99,7 +117,7 @@ export default function ShiftDialog({ open, onClose, onSaved, onDeleted, employe
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'שגיאה בשמירה'); return; }
-      track('entry_saved', { kind: 'shift', edit: !!shift });
+      track('entry_saved', { kind: 'shift', edit: !!editing });
       onSaved(data);
       onClose();
     } catch {
@@ -110,12 +128,12 @@ export default function ShiftDialog({ open, onClose, onSaved, onDeleted, employe
   }
 
   async function remove() {
-    if (!shift) return;
+    if (!editing) return;
     setSaving(true);
     try {
-      const res = await fetch(`/api/shifts/${shift.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/shifts/${editing.id}`, { method: 'DELETE' });
       if (!res.ok) { setError('שגיאה במחיקה'); return; }
-      onDeleted?.(shift.id);
+      onDeleted?.(editing.id);
       onClose();
     } finally {
       setSaving(false);
@@ -131,19 +149,33 @@ export default function ShiftDialog({ open, onClose, onSaved, onDeleted, employe
       title={`משמרת ב${employer.name}`}
       subtitle={formatDayAndDate(date)}
       footer={
+        confirmDelete ? (
+          <div className="space-y-2" role="alert">
+            <p className="text-[15px] text-text">למחוק את המשמרת? השבוע יחושב מחדש.</p>
+            <div className="flex gap-2">
+              <button type="button" onClick={remove} disabled={saving} className="wm-btn wm-btn-danger flex-1">
+                {saving ? 'מוחק…' : 'מחק'}
+              </button>
+              <button type="button" onClick={() => setConfirmDelete(false)} disabled={saving} className="wm-btn wm-btn-ghost flex-1">
+                ביטול
+              </button>
+            </div>
+          </div>
+        ) : (
         <div className="flex gap-2">
           <button type="button" onClick={save} disabled={saving} className="wm-btn wm-btn-steel flex-1">
             {saving ? 'שומר…' : 'שמור'}
           </button>
-          {shift && (
-            <button type="button" onClick={remove} disabled={saving} className="wm-btn wm-btn-danger">
+          {editing && (
+            <button type="button" onClick={() => setConfirmDelete(true)} disabled={saving} className="wm-btn wm-btn-danger">
               מחק
             </button>
           )}
         </div>
+        )
       }
     >
-      {shift?.calendar_event_id && (
+      {editing?.calendar_event_id && (
         <p className="text-[13px] text-text-mute">
           <CalendarTag /> המשמרת נכנסה מהיומן. שמירה כאן תנתק אותה מהיומן, כדי שהעדכון הבא לא ידרוס את התיקון.
         </p>
@@ -157,6 +189,18 @@ export default function ShiftDialog({ open, onClose, onSaved, onDeleted, employe
         <label htmlFor="shift-date" className="wm-label">תאריך</label>
         <input id="shift-date" type="date" className="wm-field" value={date} onChange={e => setDate(e.target.value)} />
       </div>
+
+      {sameDay && (
+        <div className="rounded-[10px] border border-alert/60 p-3 space-y-2" role="status">
+          <p className="text-[15px] text-text">
+            כבר יש משמרת ב-<bdi>{formatShortDate(sameDay.shift_date)}</bdi>:{' '}
+            <bdi className="wm-num">{sameDay.start_time.slice(0, 5)}–{sameDay.end_time.slice(0, 5)}</bdi>
+          </p>
+          <button type="button" onClick={() => editExisting(sameDay)} className="wm-btn wm-btn-ghost w-full">
+            ערוך את הקיימת
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -185,7 +229,7 @@ export default function ShiftDialog({ open, onClose, onSaved, onDeleted, employe
 
       {b && (
         <div className="border-t border-rule pt-3" aria-live="polite">
-          <p className="wm-num text-[21px] text-text">{formatHours(b.netHours)} שעות</p>
+          <p className="wm-num text-[21px] text-text">{formatHours(b.netHours)} ש׳</p>
           <p className="text-[13px] text-text-mute">
             {isRest
               ? `מנוחה ${formatDecimal(b.rest)} · 187.5% ${formatDecimal(b.restOt1)} · 225% ${formatDecimal(b.restOt2)}`

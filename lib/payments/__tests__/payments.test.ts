@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { effectiveHourlyRate, isOpenEntry, linkedHours, openWorkEstimate, sumPayments, turnoverByMonth, turnoverFromPayments } from '../index';
+import { effectiveHourlyRate, paymentsCoveringReceipt, isOpenEntry, linkedHours, openWorkEstimate, sumPayments, turnoverByMonth, turnoverFromPayments } from '../index';
 
 const payments = [
   { received_date: '2026-01-15', amount: 1_000 },
@@ -66,5 +66,24 @@ describe('תעריף אפקטיבי לתקבול', () => {
 
   it('בלי שעות מקושרות → אין תעריף', () => {
     expect(effectiveHourlyRate(700, 0)).toBeNull();
+  });
+});
+
+describe('קבלה ישנה שכבר מכוסה בתקבולים', () => {
+  const receipt = { id: 'r1', client_id: 'c1', period_year: 2026, period_month: 5 };
+  const p = (client_id: string, received_date: string, receipt_id: string | null = null) => ({ client_id, received_date, receipt_id });
+
+  it('תקבול מאותו לקוח בחודש התקופה או בחודש שאחריו מכסה', () => {
+    expect(paymentsCoveringReceipt(receipt, [p('c1', '2026-05-28'), p('c1', '2026-06-10')])).toHaveLength(2);
+  });
+
+  it('לקוח אחר, חודש רחוק, או התקבול של הקבלה עצמה — לא מכסים', () => {
+    expect(paymentsCoveringReceipt(receipt, [
+      p('c2', '2026-05-28'), p('c1', '2026-04-30'), p('c1', '2026-07-01'), p('c1', '2026-05-15', 'r1'),
+    ])).toEqual([]);
+  });
+
+  it('קבלה של דצמבר — ינואר של השנה הבאה מכסה', () => {
+    expect(paymentsCoveringReceipt({ ...receipt, period_month: 12 }, [p('c1', '2027-01-05')])).toHaveLength(1);
   });
 });

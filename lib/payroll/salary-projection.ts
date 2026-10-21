@@ -42,6 +42,14 @@ export function averageMonthlyGross(input: SalaryProjectionInput): number {
   return Math.max(0, input.fallbackMonthly);
 }
 
+/** החלק של החודש שבו עבד: בחודש תחילת העבודה — מתאריך ההתחלה בלבד (ימים קלנדריים). */
+export function employedFraction(year: number, month: number, start: string | null): number {
+  if (!start || start.slice(0, 7) !== `${year}-${pad(month)}`) return 1;
+  const days = new Date(year, month, 0).getDate();
+  const startDay = Number(start.slice(8, 10));
+  return (days - startDay + 1) / days;
+}
+
 export function projectMonthlySalaries(input: SalaryProjectionInput): number[] {
   const avg = averageMonthlyGross(input);
   return Array.from({ length: 12 }, (_, i) => {
@@ -51,7 +59,7 @@ export function projectMonthlySalaries(input: SalaryProjectionInput): number[] {
     if (!isEmployed(input.year, m, input.employmentStart, input.employmentEnd)) return 0;
     const shifts = input.shiftsExpected[m] ?? 0;
     if (m < input.currentMonth && shifts > 0) return shifts;
-    return avg;
+    return Math.round(avg * employedFraction(input.year, m, input.employmentStart) * 100) / 100;
   });
 }
 

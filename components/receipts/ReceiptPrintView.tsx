@@ -84,7 +84,7 @@ export default function ReceiptPrintView({ receipt }: Props) {
       )}
 
       <div className="text-center text-[13px] text-text-mute border-t border-rule pt-4">
-        עוסק פטור — פטור מניכוי מע&quot;מ
+        עוסק פטור
       </div>
 
       <div className="mt-6 flex gap-3 no-print">

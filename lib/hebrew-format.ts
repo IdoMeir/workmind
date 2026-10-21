@@ -53,10 +53,9 @@ export function formatShortDate(dateStr: string): string {
   return `${d}.${m}`;
 }
 
-/** 9 → "9:00", 8.6 → "8:36" */
+/** שעות בעשרוני, אחיד בכל האפליקציה: 8.5 → "8.5", 9 → "9", 8.25 → "8.25" */
 export function formatHours(hours: number): string {
-  const total = Math.round(hours * 60);
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+  return formatDecimal(hours, 2);
 }
 
 /** 8.6 → "8.6", 9 → "9" */

@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { ClientMonthlySummary } from '@/types';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const MODEL = 'claude-sonnet-4-20250514';
+const MODEL = 'claude-sonnet-5-5';
 
 export interface MonthlyAnalysisInput {
   year: number;
@@ -24,7 +24,7 @@ export async function generateMonthlyAnalysis(input: MonthlyAnalysisInput): Prom
     `- ${c.clientName}: ₪${c.total.toLocaleString()} (${c.totalHours} שעות, ${c.eventsCount} אירועים)`
   ).join('\n');
 
-  const prompt = `אתה יועץ עסקי לפרילנסר עצמאי. נתח את החודש החולף וספק תובנות פרקטיות.
+  const prompt = `אתה יועץ עסקי לבעל עסק זעיר שעובד גם כשכיר. נתח את החודש החולף וספק תובנות פרקטיות.
 
 חודש: ${monthName} ${input.year}
 סה"כ הכנסות החודש: ₪${input.totalAmount.toLocaleString()}

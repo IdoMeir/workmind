@@ -3,6 +3,7 @@ import { ChevronLeft, Download, FileText, List, Settings, Sparkles, Users } from
 import PageHeader from '@/components/shared/PageHeader';
 import { BusinessIcon, SalaryIcon } from '@/components/shared/SourceIcon';
 import AddEventButton from '@/components/more/AddEventButton';
+import SignOutButton from '@/components/more/SignOutButton';
 
 interface Item {
   href: string;
@@ -38,6 +39,7 @@ const SECTIONS: { title: string; items: Item[]; extra?: React.ReactNode }[] = [
     items: [
       { href: '/settings', label: 'הגדרות', hint: 'פרטים אישיים, נקודות זיכוי, ישוב, מסלול', icon: <Settings size={20} aria-hidden="true" className="text-text-mute" /> },
     ],
+    extra: <SignOutButton />,
   },
 ];
 

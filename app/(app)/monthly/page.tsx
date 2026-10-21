@@ -48,6 +48,7 @@ export default function MonthlyPage() {
 
   const [shiftOpen, setShiftOpen] = useState(false);
   const [editShift, setEditShift] = useState<Shift | null>(null);
+  const [confirmPaymentId, setConfirmPaymentId] = useState<string | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
 
   const load = useCallback(async () => {
@@ -119,6 +120,7 @@ export default function MonthlyPage() {
 
   async function deletePayment(id: string) {
     const res = await fetch(`/api/payments/${id}`, { method: 'DELETE' });
+    setConfirmPaymentId(null);
     if (res.ok) load();
   }
 
@@ -292,8 +294,17 @@ export default function MonthlyPage() {
                         </span>
                       </span>
                       <Money amount={Number(p.amount)} className="wm-num" />
-                      <button onClick={() => deletePayment(p.id)} aria-label={`מחק תקבול מ${p.client?.name ?? 'לקוח'}`}
-                        className="wm-btn text-text-mute text-[13px]">מחק</button>
+                      {confirmPaymentId === p.id ? (
+                        <span className="flex flex-col gap-1" role="alert">
+                          <span className="text-[13px] text-alert">למחוק?</span>
+                          <button onClick={() => deletePayment(p.id)} aria-label={`אישור מחיקת תקבול מ${p.client?.name ?? 'לקוח'}`}
+                            className="wm-btn wm-btn-danger text-[13px]">מחק</button>
+                          <button onClick={() => setConfirmPaymentId(null)} className="wm-btn wm-btn-ghost text-[13px]">ביטול</button>
+                        </span>
+                      ) : (
+                        <button onClick={() => setConfirmPaymentId(p.id)} aria-label={`מחק תקבול מ${p.client?.name ?? 'לקוח'}`}
+                          className="wm-btn text-text-mute text-[13px]">מחק</button>
+                      )}
                     </li>
                     );
                   })}

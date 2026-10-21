@@ -248,19 +248,21 @@ export default function EmployerPage() {
 
             <details className="group">
               <summary className="min-h-11 flex items-center cursor-pointer text-text-mute">ספי שעות נוספות (לפי החוק, ניתן לשנות לפי הסכם)</summary>
-              <div className="grid grid-cols-3 gap-2 pt-2">
+              <div className="space-y-3 pt-2">
                 <div>
-                  <label htmlFor="emp-ot-d" className="wm-label">יום רגיל</label>
+                  <label htmlFor="emp-ot-d" className="wm-label">סף יומי (שעות)</label>
                   <input id="emp-ot-d" type="number" step="0.1" className="wm-field" value={form.ot_daily_threshold}
                     onChange={e => set('ot_daily_threshold', Number(e.target.value))} />
                 </div>
+                {form.short_day !== null && (
                 <div>
-                  <label htmlFor="emp-ot-s" className="wm-label">יום קצר</label>
+                  <label htmlFor="emp-ot-s" className="wm-label">סף יום קצר (שעות)</label>
                   <input id="emp-ot-s" type="number" step="0.1" className="wm-field" value={form.ot_short_day_threshold}
                     onChange={e => set('ot_short_day_threshold', Number(e.target.value))} />
                 </div>
+                )}
                 <div>
-                  <label htmlFor="emp-ot-w" className="wm-label">שבועי</label>
+                  <label htmlFor="emp-ot-w" className="wm-label">סף שבועי (שעות)</label>
                   <input id="emp-ot-w" type="number" step="0.5" className="wm-field" value={form.ot_weekly_threshold}
                     onChange={e => set('ot_weekly_threshold', Number(e.target.value))} />
                 </div>

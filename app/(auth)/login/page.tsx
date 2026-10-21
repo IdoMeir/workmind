@@ -36,7 +36,7 @@ export default function LoginPage() {
           {/* eslint-disable-next-line @next/next/no-img-element -- SVG סטטי מ-public */}
           <img src="/icons/icon.svg" width={56} height={56} alt="" className="mx-auto mb-3" />
           <h1 className="wm-title text-[24px]">בשתי ידיי</h1>
-          <p className="text-text-mute text-[15px] mt-1">ניהול עבודה לפרילנסר</p>
+          <p className="text-text-mute text-[15px] mt-1">שכר ועסק במקום אחד</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

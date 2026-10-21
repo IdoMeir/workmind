@@ -101,6 +101,8 @@ export default function HoursReportView({ entries, client, year, month, printMod
   const monthName = MONTH_NAMES[month - 1];
   const pdfRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
+  // ה-div ל-PDF קיים רק בזמן ההורדה. left:-9999px ב-RTL גלל את כל הדף שמאלה והמסך נראה ריק.
+  const [pdfMounted, setPdfMounted] = useState(false);
 
   // printMode: auto-trigger browser print dialog (opened via ?print=true tab)
   useEffect(() => {
@@ -118,9 +120,13 @@ export default function HoursReportView({ entries, client, year, month, printMod
   const totalAmount = hoursEntries.reduce((s, e) => s + e.amount, 0);
 
   async function downloadPdf() {
-    if (!pdfRef.current || downloading) return;
+    if (downloading) return;
     setDownloading(true);
+    setPdfMounted(true);
     try {
+      // מחכים שה-div יתרנדר לפני הצילום.
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      if (!pdfRef.current) return;
       const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
         import('jspdf'),
         import('html2canvas'),
@@ -150,6 +156,7 @@ export default function HoursReportView({ entries, client, year, month, printMod
 
       pdf.save(`דוח-שעות-${client.name}-${monthName}.pdf`);
     } finally {
+      setPdfMounted(false);
       setDownloading(false);
     }
   }
@@ -176,14 +183,12 @@ export default function HoursReportView({ entries, client, year, month, printMod
   // ── Normal screen view ──────────────────────────────────────────────────────
   return (
     <>
-      {/* Off-screen div rendered for html2canvas PDF capture */}
+      {/* div ל-html2canvas, בתוך מיכל fixed בגודל 0 כדי שלא ירחיב את הדף */}
+      {pdfMounted && (
+      <div aria-hidden="true" dir="rtl" style={{ position: 'fixed', top: 0, left: 0, width: 0, height: 0, overflow: 'hidden' }}>
       <div
         ref={pdfRef}
-        aria-hidden="true"
         style={{
-          position: 'absolute',
-          top: 0,
-          left: '-9999px',
           width: '794px',       // ≈ A4 width at 96dpi
           backgroundColor: '#ffffff',
           padding: '40px 48px',
@@ -250,6 +255,8 @@ export default function HoursReportView({ entries, client, year, month, printMod
           דו&quot;ח זה הופק מתוך בשתי ידיי • {new Date().toLocaleDateString('he-IL')}
         </div>
       </div>
+      </div>
+      )}
 
       <div className="min-h-screen bg-ink text-text">
         <div className="no-print flex items-center gap-2 px-2 py-2 border-b border-rule sticky top-0 z-10 bg-ink">
