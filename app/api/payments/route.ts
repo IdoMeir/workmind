@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { paymentSchema } from '@/lib/validations';
 import { getDateRange } from '@/lib/hebrew-format';
 
-/** GET ?year=&month= | ?year= */
+/** GET ?year=&month= | ?year= | ?from=&to= */
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -23,6 +23,8 @@ export async function GET(request: NextRequest) {
   } else if (year) {
     query = query.gte('received_date', `${year}-01-01`).lte('received_date', `${year}-12-31`);
   }
+  if (sp.get('from')) query = query.gte('received_date', sp.get('from')!);
+  if (sp.get('to')) query = query.lte('received_date', sp.get('to')!);
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

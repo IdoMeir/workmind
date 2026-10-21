@@ -32,6 +32,12 @@ export default function SelfStatusCard({ activity }: { activity: BusinessActivit
           לפי 3 החודשים האחרונים בעסק: <bdi className="wm-num">{formatDecimal(activity.avgWeeklyHours, 1)}</bdi> שעות
           בשבוע, <Money amount={activity.avgMonthlyIncome} /> בחודש.
         </p>
+        <p>
+          השעות לפי העבודות שרשמת. ההכנסה לפי התשלומים שהתקבלו בפועל, לא לפי הסכומים המשוערים ליד העבודות.
+        </p>
+        <p>
+          לאמת מול ב״ל אם בעסק זעיר הם בודקים את סף ההכנסה לפי 70% מהתשלומים (ההכנסה החייבת) ולא לפי המחזור המלא.
+        </p>
         <ul className="list-disc ps-5 space-y-1">
           <li>{SELF_STATUS.hoursA} שעות בשבוע ומעלה — עצמאי.</li>
           <li>הכנסה של <Money amount={SELF_STATUS.incomeA} /> בחודש ומעלה — עצמאי.</li>

@@ -29,8 +29,10 @@ interface TodayData {
   openEntries: WorkEntry[];
   recentShifts: Shift[];
   recentEntries: WorkEntry[];
-  /** עבודות העסק ב-91 הימים האחרונים — לאינדיקטור עצמאי. */
+  /** עבודות העסק ב-91 הימים האחרונים — שעות לאינדיקטור עצמאי. */
   activityEntries: WorkEntry[];
+  /** תשלומים ב-91 הימים האחרונים — הכנסה לאינדיקטור עצמאי. */
+  activityPayments: Payment[];
 }
 
 type RecentItem =
@@ -66,7 +68,7 @@ export default function TodayPage() {
 
   const load = useCallback(async () => {
     const windowFrom = addDays(todayISO(), -(SELF_STATUS_WINDOW_DAYS - 1));
-    const [settings, employers, clients, monthShifts, monthPayments, openEntries, recentShifts, recentEntries, activityEntries] = await Promise.all([
+    const [settings, employers, clients, monthShifts, monthPayments, openEntries, recentShifts, recentEntries, activityEntries, activityPayments] = await Promise.all([
       getJson<UserSettings | null>('/api/settings', null),
       getJson<Employer[]>('/api/employers', []),
       getJson<Client[]>('/api/clients', []),
@@ -76,6 +78,7 @@ export default function TodayPage() {
       getJson<Shift[]>('/api/shifts?limit=5', []),
       getJson<WorkEntry[]>('/api/entries?limit=5', []),
       getJson<WorkEntry[]>(`/api/entries?from=${windowFrom}&to=${todayISO()}`, []),
+      getJson<Payment[]>(`/api/payments?from=${windowFrom}&to=${todayISO()}`, []),
     ]);
     setData({
       settings,
@@ -87,6 +90,7 @@ export default function TodayPage() {
       recentShifts,
       recentEntries,
       activityEntries,
+      activityPayments,
     });
   }, [year, month]);
 
@@ -263,7 +267,7 @@ export default function TodayPage() {
       </section>
 
       {/* עצמאי לפי ב"ל */}
-      {data.clients.length > 0 && <SelfStatusCard activity={businessActivity(data.activityEntries, today)} />}
+      {data.clients.length > 0 && <SelfStatusCard activity={businessActivity(data.activityEntries, data.activityPayments, today)} />}
 
       {/* אחרונים */}
       {recent.length > 0 && (
