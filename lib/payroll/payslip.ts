@@ -64,3 +64,23 @@ export function summarizeMonth(shifts: ShiftHoursRow[]): MonthHours {
     shiftsCount: t.shiftsCount, expectedFromShifts: r2(t.expectedFromShifts),
   };
 }
+
+type EmployerPay = {
+  pay_type: 'hourly' | 'daily' | 'monthly';
+  monthly_salary: number | string | null;
+  travel_per_day: number | string | null;
+};
+
+/**
+ * ברוטו צפוי לחודש: שווי המשמרות + נסיעות לכל יום עבודה (לא מנוחה)
+ * + המשכורת הבסיסית כשהתשלום חודשי.
+ */
+export function expectedMonthGross(
+  shifts: (ShiftHoursRow & { is_rest_day: boolean })[],
+  employer: EmployerPay
+): number {
+  const fromShifts = summarizeMonth(shifts).expectedFromShifts;
+  const travel = employer.travel_per_day ? Number(employer.travel_per_day) * shifts.filter(s => !s.is_rest_day).length : 0;
+  const monthlyBase = employer.pay_type === 'monthly' && employer.monthly_salary ? Number(employer.monthly_salary) : 0;
+  return Math.round((fromShifts + travel + monthlyBase) * 100) / 100;
+}

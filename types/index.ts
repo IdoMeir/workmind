@@ -109,57 +109,6 @@ export interface MonthlyInsight {
   created_at: string;
 }
 
-export interface TaxBracket {
-  min: number;
-  max: number | null;
-  rate: number;
-}
-
-export interface TaxBreakdownLine {
-  bracketMin: number;
-  bracketMax: number;
-  rate: number;
-  taxableAmount: number;
-  tax: number;
-}
-
-export interface IncomeTaxResult {
-  grossTax: number;
-  breakdown: TaxBreakdownLine[];
-}
-
-export interface NIBreakdown {
-  reducedRateAmount: number;
-  reducedRateTax: number;
-  fullRateAmount: number;
-  fullRateTax: number;
-  total: number;
-}
-
-export interface TaxCalculationParams {
-  businessIncome: number;
-  salaryIncome: number;
-  creditPoints: number;
-  settlementCreditRate: number;
-  settlementCeiling: number;
-}
-
-export interface TaxSummary {
-  businessIncome: number;
-  salaryIncome: number;
-  totalIncome: number;
-  creditPoints: number;
-  grossIncomeTax: number;
-  incomeTaxBreakdown: TaxBreakdownLine[];
-  creditPointsValue: number;
-  settlementCredit: number;
-  netIncomeTax: number;
-  nationalInsurance: NIBreakdown;
-  totalAnnualTax: number;
-  taxYear: number;
-  calculatedAt: string;
-}
-
 export interface MonthlySummary {
   year: number;
   month: number;

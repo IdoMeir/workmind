@@ -8,7 +8,7 @@ import ShiftDialog from '@/components/payroll/ShiftDialog';
 import Money from '@/components/shared/Money';
 import { BusinessIcon, SalaryIcon } from '@/components/shared/SourceIcon';
 import { formatDecimal, formatHebrewMonthYear, formatHours, formatShortDate, getCurrentMonthYear } from '@/lib/hebrew-format';
-import { comparePayslip, summarizeMonth } from '@/lib/payroll/payslip';
+import { comparePayslip, expectedMonthGross, summarizeMonth } from '@/lib/payroll/payslip';
 import { methodLabel } from '@/lib/payments';
 import type { Client, Employer, MonthlySummary, Payment, Payslip, Shift } from '@/types';
 
@@ -108,9 +108,8 @@ export default function MonthlyPage() {
 
   const hours = data ? summarizeMonth(data.shifts) : null;
   const employer = data?.employer ?? null;
-  const travel = employer?.travel_per_day ? Number(employer.travel_per_day) * (data?.shifts.filter(s => !s.is_rest_day).length ?? 0) : 0;
-  const monthlyBase = employer?.pay_type === 'monthly' && employer.monthly_salary ? Number(employer.monthly_salary) : 0;
-  const expectedGross = hours ? Math.round((hours.expectedFromShifts + travel + monthlyBase) * 100) / 100 : 0;
+  const travel = employer?.travel_per_day ? Number(employer.travel_per_day) : 0;
+  const expectedGross = data && employer ? expectedMonthGross(data.shifts, employer) : 0;
   const comparison = gross !== '' && !isNaN(Number(gross)) ? comparePayslip(expectedGross, Number(gross)) : null;
 
   const paymentsTotal = (data?.payments ?? []).reduce((s, p) => s + Number(p.amount), 0);

@@ -42,3 +42,6 @@ export const EMPLOYER_DEFAULTS = {
 
 /** שעת התחלה כשאין עדיין "יום רגיל" קודם. */
 export const DEFAULT_SHIFT_START = '07:00';
+
+/** שבועות בחודש בממוצע (52 ÷ 12) — להערכת שכר חודשי כשאין תלושים. */
+export const WEEKS_PER_MONTH = 52 / 12;

@@ -7,6 +7,7 @@ import {
   ZAIR_TURNOVER_CEILING_2026,
   annualLiability,
   calculateAnnualSelfEmployedNI,
+  evenMonthlySalaries,
   calculateBusinessTaxable,
   calculateEmployeeNI,
   calculateIncomeTax,
@@ -109,7 +110,7 @@ describe('קצה — הכנסה 0', () => {
 
   it('שים בצד מחזור 0 בלי משכורת → 0 (ההכנסה המזערית לא זזה)', () => {
     const r = calculateSetAside({
-      annualSalary: 0, annualTurnover: 0, track: 'zair', creditPoints: MALE, settlement: GAATON,
+      monthlySalaries: evenMonthlySalaries(0), annualTurnover: 0, track: 'zair', creditPoints: MALE, settlement: GAATON,
     });
     expect(r.perHundred).toBe(0);
   });
@@ -183,7 +184,7 @@ describe('מס יסף', () => {
 describe('שים בצד — דוגמת מסך המס (סעיף 6)', () => {
   // משכורת 8,000 ₪ לחודש, מחזור זעיר 20,000 ₪ לשנה, געתון, זכר.
   const inputs = {
-    annualSalary: 96_000,
+    monthlySalaries: evenMonthlySalaries(96_000),
     annualTurnover: 20_000,
     track: 'zair' as const,
     creditPoints: MALE,
@@ -204,7 +205,7 @@ describe('שים בצד — דוגמת מסך המס (סעיף 6)', () => {
 
   it('בין נקודת האיזון לתקרת געתון — מס שולי 20% פחות 10% ישוב', () => {
     // הכנסה חייבת 160,000 + 14,000 = 174,000: מעל 171,420 ומתחת ל-180,000.
-    const r = calculateSetAside({ ...inputs, annualSalary: 160_000 });
+    const r = calculateSetAside({ ...inputs, monthlySalaries: evenMonthlySalaries(160_000) });
     // 10% שולי על 70 ₪ חייבים = 7; ב"ל 18% × 70 = 12.6
     expect(r.incomeTaxPart).toBeCloseTo(7, 1);
     expect(r.perHundred).toBeCloseTo(19.6, 1);
@@ -212,17 +213,48 @@ describe('שים בצד — דוגמת מסך המס (סעיף 6)', () => {
 
   it('מעל תקרת געתון — אין זיכוי ישוב שולי, 20% מלא', () => {
     // הכנסה חייבת 214,000 > 180,000.
-    const r = calculateSetAside({ ...inputs, annualSalary: 200_000 });
+    const r = calculateSetAside({ ...inputs, monthlySalaries: evenMonthlySalaries(200_000) });
     // 20% × 70 = 14; ב"ל 18% × 70 = 12.6
     expect(r.incomeTaxPart).toBeCloseTo(14, 1);
     expect(r.perHundred).toBeCloseTo(26.6, 1);
   });
 });
 
-describe('ב"ל שנתי', () => {
-  it('12 × החודשי הממוצע', () => {
-    const annual = calculateAnnualSelfEmployedNI(0, 67_200);
+describe('ב"ל שנתי — כל חודש לחוד', () => {
+  it('בלי משכורת: 12 × החודשי', () => {
+    const annual = calculateAnnualSelfEmployedNI(evenMonthlySalaries(0), 67_200);
     expect(annual.total).toBeCloseTo(431.2 * 12, 2);
+  });
+
+  it('משכורת 8,000 רק בנובמבר ובדצמבר, מחזור 55,000, זעיר → 10 חודשי הכנסה מזערית + 2 חודשים ב-18%', () => {
+    const salaries = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8_000, 8_000];
+    const base = calculateBusinessTaxable({ track: 'zair', annualTurnover: 55_000 }).taxableIncome; // 38,500
+    const annual = calculateAnnualSelfEmployedNI(salaries, base);
+    const monthlyBase = 38_500 / 12; // 3,208.33 — מתחת להכנסה המזערית
+
+    expect(annual.minimumIncomeMonths).toBe(10);
+    annual.months.slice(0, 10).forEach(m => {
+      expect(m.minimumIncomeApplied).toBe(true);
+      expect(m.total).toBeCloseTo(3_442 * 0.077, 4);
+    });
+    annual.months.slice(10).forEach(m => {
+      expect(m.minimumIncomeApplied).toBe(false);
+      expect(m.reducedTax).toBe(0); // המשכורת תפסה את המדרגה המופחתת
+      expect(m.total).toBeCloseTo(monthlyBase * 0.18, 4);
+    });
+    expect(annual.total).toBeCloseTo(10 * 3_442 * 0.077 + 2 * monthlyBase * 0.18, 2); // 3,805.34
+    expect(annual.verifyMinimumWithNI).toBe(true);
+  });
+
+  it('שונה מהחישוב לפי ממוצע — ממוצע היה נותן תוצאה אחרת', () => {
+    const salaries = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8_000, 8_000];
+    const byMonth = calculateAnnualSelfEmployedNI(salaries, 38_500).total;
+    const byAverage = calculateAnnualSelfEmployedNI(evenMonthlySalaries(16_000), 38_500).total;
+    expect(Math.abs(byMonth - byAverage)).toBeGreaterThan(100);
+  });
+
+  it('דורש בדיוק 12 משכורות', () => {
+    expect(() => calculateAnnualSelfEmployedNI([1, 2, 3], 1_000)).toThrow();
   });
 });
 

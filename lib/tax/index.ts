@@ -6,3 +6,5 @@ export * from './zair';
 export * from './status';
 export * from './setaside';
 export * from './projection';
+export * from './tasks';
+export * from './year-view';

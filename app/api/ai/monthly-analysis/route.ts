@@ -4,7 +4,7 @@ import { generateMonthlyAnalysis } from '@/lib/claude';
 import { buildMonthlySummary } from '@/lib/calculations';
 import { calculateYearProgress } from '@/lib/calculations';
 import { getDateRange } from '@/lib/hebrew-format';
-import { OSEK_PATUR_CEILING_2026 } from '@/lib/tax-calculator';
+import { OSEK_PATUR_CEILING_2026 } from '@/lib/calculations';
 import type { WorkEntry } from '@/types';
 
 export async function POST(request: NextRequest) {

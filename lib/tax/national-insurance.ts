@@ -73,19 +73,45 @@ export function calculateEmployeeNI(monthlySalary: number): number {
   return reduced * NI_EMP_REDUCED + (salary - reduced) * NI_EMP_FULL;
 }
 
-/** הערכה שנתית: 12 חודשים לפי הממוצע החודשי של כל מקור. */
-export function calculateAnnualSelfEmployedNI(annualSalary: number, annualBusinessBase: number): SelfEmployedNIResult {
-  const m = calculateSelfEmployedNI({
-    monthlySalary: annualSalary / 12,
-    monthlyBusinessBase: annualBusinessBase / 12,
-  });
+export interface AnnualNIResult extends SelfEmployedNIResult {
+  /** החישוב של כל חודש לחוד (ינואר = 0). */
+  months: SelfEmployedNIResult[];
+  /** בכמה חודשים הופעלה ההכנסה המזערית. */
+  minimumIncomeMonths: number;
+}
+
+/**
+ * הערכה שנתית: כל חודש מחושב לחוד מול המשכורת של אותו חודש, והבסיס העסקי
+ * מתחלק שווה בין 12 החודשים. כך שנה שבה המשכורת מתחילה באמצע מחושבת נכון:
+ * בחודשים בלי משכורת חלה ההכנסה המזערית והמדרגה המופחתת פנויה לעסק.
+ * @param monthlySalaries 12 משכורות ברוטו, 0 בחודש שאין בו משכורת.
+ */
+export function calculateAnnualSelfEmployedNI(monthlySalaries: number[], annualBusinessBase: number): AnnualNIResult {
+  if (monthlySalaries.length !== 12) {
+    throw new Error(`calculateAnnualSelfEmployedNI: expected 12 monthly salaries, got ${monthlySalaries.length}`);
+  }
+  const monthlyBase = Math.max(0, annualBusinessBase) / 12;
+  const months = monthlySalaries.map(salary =>
+    calculateSelfEmployedNI({ monthlySalary: salary, monthlyBusinessBase: monthlyBase })
+  );
+  const total = (key: keyof Pick<SelfEmployedNIResult, 'chargedBase' | 'reducedAmount' | 'reducedTax' | 'fullAmount' | 'fullTax' | 'total'>) =>
+    months.reduce((s, m) => s + m[key], 0);
+
   return {
-    ...m,
-    chargedBase: m.chargedBase * 12,
-    reducedAmount: m.reducedAmount * 12,
-    reducedTax: m.reducedTax * 12,
-    fullAmount: m.fullAmount * 12,
-    fullTax: m.fullTax * 12,
-    total: m.total * 12,
+    chargedBase: total('chargedBase'),
+    reducedAmount: total('reducedAmount'),
+    reducedTax: total('reducedTax'),
+    fullAmount: total('fullAmount'),
+    fullTax: total('fullTax'),
+    total: total('total'),
+    minimumIncomeApplied: months.some(m => m.minimumIncomeApplied),
+    verifyMinimumWithNI: months.some(m => m.verifyMinimumWithNI),
+    months,
+    minimumIncomeMonths: months.filter(m => m.minimumIncomeApplied).length,
   };
+}
+
+/** משכורת שנתית שמתחלקת שווה על 12 חודשים. */
+export function evenMonthlySalaries(annualSalary: number): number[] {
+  return new Array<number>(12).fill(Math.max(0, annualSalary) / 12);
 }

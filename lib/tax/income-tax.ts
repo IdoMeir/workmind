@@ -86,3 +86,20 @@ export function calculateIncomeTax({ taxableIncome, creditPoints, settlement }: 
     netTax: Math.max(0, afterPoints - settlementCredit),
   };
 }
+
+/**
+ * עד איזו הכנסה חייבת שנתית המס נטו הוא 0 (נקודות זיכוי + ישוב מכסים).
+ * חיפוש בינארי על calculateIncomeTax, מעוגל לשקל.
+ */
+export function taxFreeIncomeLimit(creditPoints: number, settlement: SettlementParams | null): number {
+  const tax = (x: number) => calculateIncomeTax({ taxableIncome: x, creditPoints, settlement }).netTax;
+  let lo = 0;
+  let hi = 2_000_000;
+  if (tax(hi) <= 0.005) return hi;
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    if (tax(mid) <= 0.005) lo = mid;
+    else hi = mid;
+  }
+  return Math.round(lo);
+}

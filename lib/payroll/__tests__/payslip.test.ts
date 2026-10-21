@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { comparePayslip, summarizeMonth } from '../payslip';
+import { comparePayslip, expectedMonthGross, summarizeMonth } from '../payslip';
 
 describe('השוואה לתלוש', () => {
   it('פער מעל 2% כלפי מטה → התראה, "התלוש נמוך"', () => {
@@ -33,5 +33,22 @@ describe('סיכום שעות חודשי', () => {
       { hours_regular: 0, hours_125: 0, hours_150: 0, hours_rest: 8.6, hours_rest_ot_1: 2, hours_rest_ot_2: 0.4, expected_amount: 816.28 },
     ]);
     expect(s).toEqual({ regular: 8.6, h125: 1.4, h150: 0, rest: 11, shiftsCount: 2, expectedFromShifts: 1297.68 });
+  });
+});
+
+describe('ברוטו צפוי לחודש', () => {
+  const shift = (amount: number, rest = false) => ({
+    hours_regular: 8.6, hours_125: 0, hours_150: 0, hours_rest: 0, hours_rest_ot_1: 0, hours_rest_ot_2: 0,
+    expected_amount: amount, is_rest_day: rest,
+  });
+
+  it('יומי: משמרות + נסיעות לימי עבודה בלבד', () => {
+    expect(expectedMonthGross([shift(400), shift(400), shift(600, true)], { pay_type: 'daily', monthly_salary: null, travel_per_day: 20 }))
+      .toBe(1_400 + 2 * 20);
+  });
+
+  it('חודשי: המשכורת + התוספות מהמשמרות', () => {
+    expect(expectedMonthGross([shift(87.5)], { pay_type: 'monthly', monthly_salary: '9100', travel_per_day: null }))
+      .toBe(9_187.5);
   });
 });

@@ -2,16 +2,18 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { RotateCcw } from 'lucide-react';
-import type { Client, Employer, Shift, WorkEntry } from '@/types';
+import { ChevronLeft, RotateCcw } from 'lucide-react';
+import type { Client, Employer, Shift, UserSettings, WorkEntry } from '@/types';
 import Money from '@/components/shared/Money';
 import { BusinessIcon, SalaryIcon } from '@/components/shared/SourceIcon';
 import ShiftDialog from '@/components/payroll/ShiftDialog';
 import QuickAddHoursDialog from '@/components/entries/QuickAddHoursDialog';
 import { formatDecimal, formatHebrewMonth, formatHours, formatShortDate, getCurrentMonthYear, todayISO } from '@/lib/hebrew-format';
 import { dayOfWeek } from '@/lib/payroll/overtime';
+import { buildTaxTasks, nextDeadlineTask } from '@/lib/tax/tasks';
 
 interface TodayData {
+  settings: UserSettings | null;
   employer: Employer | null;
   clients: Client[];
   monthShifts: Shift[];
@@ -52,7 +54,8 @@ export default function TodayPage() {
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
-    const [employers, clients, monthShifts, monthEntries, recentShifts, recentEntries] = await Promise.all([
+    const [settings, employers, clients, monthShifts, monthEntries, recentShifts, recentEntries] = await Promise.all([
+      getJson<UserSettings | null>('/api/settings', null),
       getJson<Employer[]>('/api/employers', []),
       getJson<Client[]>('/api/clients', []),
       getJson<Shift[]>(`/api/shifts?year=${year}&month=${month}`, []),
@@ -61,6 +64,7 @@ export default function TodayPage() {
       getJson<WorkEntry[]>('/api/entries?limit=5', []),
     ]);
     setData({
+      settings,
       employer: employers.find(e => !e.end_date) ?? employers[0] ?? null,
       clients,
       monthShifts,
@@ -93,6 +97,8 @@ export default function TodayPage() {
   const lastShift = data.recentShifts[0];
   const lastWork = data.recentEntries.find(e => e.entry_type === 'hours');
   const defaultClientId = data.recentEntries[0]?.client_id ?? null;
+
+  const deadline = data.settings ? nextDeadlineTask(buildTaxTasks(year, today, data.settings)) : null;
 
   const recent: RecentItem[] = [
     ...data.recentShifts.map(s => ({ kind: 'shift' as const, date: s.shift_date, created: s.created_at, shift: s })),
@@ -151,6 +157,21 @@ export default function TodayPage() {
 
   return (
     <div className="p-4 space-y-4">
+      {/* מועד קרוב: alert רק בתוך 14 יום */}
+      {deadline && deadline.daysLeft !== null && (
+        <Link
+          href="/tax"
+          className={`flex items-center justify-between gap-2 min-h-11 px-4 py-2 rounded-[10px] border text-[15px] ${
+            deadline.urgent ? 'border-alert text-alert font-semibold' : 'border-rule text-text-mute'
+          }`}
+        >
+          <span>
+            {deadline.title} — {deadline.daysLeft >= 0 ? `עוד ${deadline.daysLeft} ימים` : 'עבר המועד'}
+          </span>
+          <ChevronLeft size={18} aria-hidden="true" />
+        </Link>
+      )}
+
       {/* הגיבור: סך החודש משני המקורות */}
       <section className="wm-card p-4" aria-labelledby="today-hero">
         <div className="flex items-baseline justify-between text-[13px] text-text-mute">

@@ -68,7 +68,15 @@ export const userSettingsSchema = z.object({
   settlement_credit_rate: z.number().min(0).max(0.30),
   settlement_ceiling: z.number().positive(),
   salary_annual_income: z.number().min(0),
+  tax_track: z.enum(['zair', 'regular']).optional(),
+  is_kibbutz_member: z.boolean().optional(),
 });
+
+export const checklistSchema = z.object({
+  tax_coordination_done_year: z.number().int().min(2020).max(2100).nullable().optional(),
+  form101_done: z.boolean().optional(),
+  ni_advances_updated_at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+}).refine(d => Object.keys(d).length > 0, { message: 'אין שינוי' });
 
 
 // ─── v2: מעסיק, משמרות, תלושים, תקבולים ──────────────────────

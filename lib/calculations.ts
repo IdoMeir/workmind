@@ -1,6 +1,9 @@
 import type { Client, WorkEntry, MonthlySummary, ClientMonthlySummary, YearProgress } from '@/types';
 
-export const OSEK_PATUR_CEILING_2026 = 122833;
+import { ZAIR_TURNOVER_CEILING_2026 } from '@/lib/tax/constants-2026';
+
+/** תקרת המחזור — הקבוע עצמו רק ב-lib/tax/constants-2026.ts. */
+export const OSEK_PATUR_CEILING_2026 = ZAIR_TURNOVER_CEILING_2026;
 
 export function calculateEntryAmount(
   entryType: 'hours' | 'event',

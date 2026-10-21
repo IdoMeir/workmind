@@ -4,8 +4,8 @@ import { calculateAnnualSelfEmployedNI } from './national-insurance';
 import { calculateBusinessTaxable, type TaxTrack } from './zair';
 
 export interface YearInputs {
-  /** משכורת ברוטו שנתית צפויה. */
-  annualSalary: number;
+  /** 12 משכורות ברוטו צפויות (0 בחודש בלי משכורת). */
+  monthlySalaries: number[];
   /** מחזור עסק שנתי צפוי. */
   annualTurnover: number;
   track: TaxTrack;
@@ -22,11 +22,11 @@ export function annualLiability(inputs: YearInputs): { incomeTax: number; nation
     annualExpenses: inputs.annualExpenses,
   });
   const incomeTax = calculateIncomeTax({
-    taxableIncome: Math.max(0, inputs.annualSalary) + business.taxableIncome,
+    taxableIncome: inputs.monthlySalaries.reduce((s, m) => s + Math.max(0, m), 0) + business.taxableIncome,
     creditPoints: inputs.creditPoints,
     settlement: inputs.settlement,
   }).netTax;
-  const nationalInsurance = calculateAnnualSelfEmployedNI(inputs.annualSalary, business.taxableIncome).total;
+  const nationalInsurance = calculateAnnualSelfEmployedNI(inputs.monthlySalaries, business.taxableIncome).total;
   return { incomeTax, nationalInsurance };
 }
 

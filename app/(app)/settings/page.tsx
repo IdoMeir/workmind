@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import PageHeader from '@/components/shared/PageHeader';
-import { getCreditPointsForUser, GAATON_CREDIT_RATE, GAATON_CEILING } from '@/lib/tax-calculator';
+import { BASE_POINTS, SETTLEMENT_DEFAULT } from '@/lib/tax';
+import { formatDecimal } from '@/lib/hebrew-format';
 import type { UserSettings } from '@/types';
 
 type FormData = {
@@ -17,7 +18,8 @@ type FormData = {
   settlement_name: string;
   settlement_credit_rate: string;
   settlement_ceiling: string;
-  salary_annual_income: string;
+  tax_track: 'zair' | 'regular';
+  is_kibbutz_member: boolean;
 };
 
 const DEFAULT_FORM: FormData = {
@@ -29,10 +31,11 @@ const DEFAULT_FORM: FormData = {
   email: '',
   gender: 'male',
   extra_credit_points: '0',
-  settlement_name: 'געתון',
-  settlement_credit_rate: String(GAATON_CREDIT_RATE * 100),
-  settlement_ceiling: String(GAATON_CEILING),
-  salary_annual_income: '0',
+  settlement_name: SETTLEMENT_DEFAULT.name,
+  settlement_credit_rate: String(SETTLEMENT_DEFAULT.rate * 100),
+  settlement_ceiling: String(SETTLEMENT_DEFAULT.ceiling),
+  tax_track: 'zair',
+  is_kibbutz_member: false,
 };
 
 function settingsToForm(s: UserSettings): FormData {
@@ -46,14 +49,25 @@ function settingsToForm(s: UserSettings): FormData {
     gender: s.gender ?? 'male',
     extra_credit_points: String(s.extra_credit_points ?? 0),
     settlement_name: s.settlement_name ?? '',
-    settlement_credit_rate: String((s.settlement_credit_rate ?? GAATON_CREDIT_RATE) * 100),
-    settlement_ceiling: String(s.settlement_ceiling ?? GAATON_CEILING),
-    salary_annual_income: String(s.salary_annual_income ?? 0),
+    settlement_credit_rate: String(Number(s.settlement_credit_rate ?? SETTLEMENT_DEFAULT.rate) * 100),
+    settlement_ceiling: String(s.settlement_ceiling ?? SETTLEMENT_DEFAULT.ceiling),
+    tax_track: s.tax_track ?? 'zair',
+    is_kibbutz_member: s.is_kibbutz_member ?? false,
   };
+}
+
+function Field({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label htmlFor={id} className="wm-label">{label}</label>
+      {children}
+    </div>
+  );
 }
 
 export default function SettingsPage() {
   const [form, setForm] = useState<FormData>(DEFAULT_FORM);
+  const [legacySalary, setLegacySalary] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -61,15 +75,17 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetch('/api/settings')
-      .then(r => r.json())
-      .then(data => {
-        if (data) setForm(settingsToForm(data));
-        setLoading(false);
+      .then(r => (r.ok ? r.json() : null))
+      .then((data: UserSettings | null) => {
+        if (data) {
+          setForm(settingsToForm(data));
+          setLegacySalary(Number(data.salary_annual_income ?? 0));
+        }
       })
-      .catch(() => setLoading(false));
+      .finally(() => setLoading(false));
   }, []);
 
-  function set(field: keyof FormData, value: string) {
+  function set<K extends keyof FormData>(field: K, value: FormData[K]) {
     setForm(prev => ({ ...prev, [field]: value }));
     setSaved(false);
   }
@@ -91,37 +107,37 @@ export default function SettingsPage() {
       extra_credit_points: parseFloat(form.extra_credit_points) || 0,
       settlement_name: form.settlement_name || null,
       settlement_credit_rate: (parseFloat(form.settlement_credit_rate) || 0) / 100,
-      settlement_ceiling: parseFloat(form.settlement_ceiling) || GAATON_CEILING,
-      salary_annual_income: parseFloat(form.salary_annual_income) || 0,
+      settlement_ceiling: parseFloat(form.settlement_ceiling) || SETTLEMENT_DEFAULT.ceiling,
+      // נשאר לתאימות; השכר מחושב היום מהתלושים והמשמרות.
+      salary_annual_income: legacySalary,
+      tax_track: form.tax_track,
+      is_kibbutz_member: form.is_kibbutz_member,
     };
 
-    const res = await fetch('/api/settings', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setError(data.error || 'שגיאה בשמירה');
-    } else {
-      setSaved(true);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) setError(data.error || 'שגיאה בשמירה');
+      else setSaved(true);
+    } catch {
+      setError('שגיאת רשת');
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   }
 
-  const totalCredits = getCreditPointsForUser(
-    form.gender,
-    parseFloat(form.extra_credit_points) || 0
-  );
+  const totalPoints = BASE_POINTS[form.gender] + (parseFloat(form.extra_credit_points) || 0);
 
   if (loading) {
     return (
       <>
-        <PageHeader title="הגדרות" />
-        <div className="p-4 space-y-3">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="bg-white rounded-xl border border-gray-200 h-16 animate-pulse" />
-          ))}
+        <PageHeader title="הגדרות" backHref="/more" />
+        <div className="p-4 space-y-3" aria-busy="true" aria-label="טוען">
+          {[1, 2, 3].map(i => <div key={i} className="wm-card h-24 animate-pulse" />)}
         </div>
       </>
     );
@@ -129,174 +145,94 @@ export default function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="הגדרות" />
-      <form onSubmit={handleSave} className="p-4 space-y-5 pb-24">
-
-        {/* Personal details */}
-        <section className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
-          <h2 className="font-semibold text-gray-900 text-sm uppercase tracking-wide text-gray-500">פרטים אישיים</h2>
-
-          <Field label="שם מלא *">
-            <input
-              required
-              value={form.full_name}
-              onChange={e => set('full_name', e.target.value)}
-              className={inputCls}
-              placeholder="ישראל ישראלי"
-            />
+      <PageHeader title="הגדרות" backHref="/more" />
+      <form onSubmit={handleSave} className="p-4 space-y-4">
+        <section className="wm-card p-4 space-y-3" aria-labelledby="set-personal">
+          <h2 id="set-personal" className="wm-title text-[17px]">פרטים אישיים</h2>
+          <Field id="s-name" label="שם מלא">
+            <input id="s-name" required value={form.full_name} onChange={e => set('full_name', e.target.value)} className="wm-field" />
           </Field>
-          <Field label="שם עסק">
-            <input
-              value={form.business_name}
-              onChange={e => set('business_name', e.target.value)}
-              className={inputCls}
-              placeholder="שם העסק (אופציונלי)"
-            />
+          <Field id="s-biz" label="שם עסק">
+            <input id="s-biz" value={form.business_name} onChange={e => set('business_name', e.target.value)} className="wm-field" placeholder="רשות" />
           </Field>
-          <Field label="ת.ז. / ח.פ.">
-            <input
-              value={form.tax_id}
-              onChange={e => set('tax_id', e.target.value)}
-              className={inputCls}
-              placeholder="000000000"
-            />
+          <Field id="s-tax-id" label="ת.ז. / ח.פ.">
+            <input id="s-tax-id" inputMode="numeric" value={form.tax_id} onChange={e => set('tax_id', e.target.value)} className="wm-field" />
           </Field>
-          <Field label="כתובת">
-            <input
-              value={form.address}
-              onChange={e => set('address', e.target.value)}
-              className={inputCls}
-              placeholder="רחוב, עיר"
-            />
+          <Field id="s-address" label="כתובת">
+            <input id="s-address" value={form.address} onChange={e => set('address', e.target.value)} className="wm-field" />
           </Field>
-          <Field label="טלפון">
-            <input
-              type="tel"
-              value={form.phone}
-              onChange={e => set('phone', e.target.value)}
-              className={inputCls}
-              placeholder="050-0000000"
-            />
-          </Field>
-          <Field label="אימייל">
-            <input
-              type="email"
-              value={form.email}
-              onChange={e => set('email', e.target.value)}
-              className={inputCls}
-              placeholder="me@example.com"
-            />
-          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field id="s-phone" label="טלפון">
+              <input id="s-phone" type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} className="wm-field" />
+            </Field>
+            <Field id="s-email" label="אימייל">
+              <input id="s-email" type="email" value={form.email} onChange={e => set('email', e.target.value)} className="wm-field" />
+            </Field>
+          </div>
         </section>
 
-        {/* Tax settings */}
-        <section className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
-          <h2 className="font-semibold text-sm uppercase tracking-wide text-gray-500">הגדרות מס</h2>
+        <section className="wm-card p-4 space-y-3" aria-labelledby="set-tax">
+          <h2 id="set-tax" className="wm-title text-[17px]">מס</h2>
 
-          <Field label="מין">
-            <div className="flex gap-3">
+          <fieldset>
+            <legend className="wm-label">מין (משפיע על נקודות הזיכוי)</legend>
+            <div className="grid grid-cols-2 gap-2">
               {(['male', 'female'] as const).map(g => (
-                <label key={g} className="flex items-center gap-1.5 cursor-pointer text-sm">
-                  <input
-                    type="radio"
-                    name="gender"
-                    value={g}
-                    checked={form.gender === g}
-                    onChange={() => set('gender', g)}
-                    className="accent-indigo-600"
-                  />
+                <button key={g} type="button" onClick={() => set('gender', g)} aria-pressed={form.gender === g}
+                  className={`wm-btn ${form.gender === g ? 'wm-btn-sage' : 'wm-btn-ghost'}`}>
                   {g === 'male' ? 'זכר' : 'נקבה'}
-                </label>
+                </button>
               ))}
             </div>
+          </fieldset>
+
+          <Field id="s-points" label={`נקודות זיכוי נוספות (סה"כ ${formatDecimal(totalPoints)})`}>
+            <input id="s-points" type="number" inputMode="decimal" min={0} max={20} step={0.25}
+              value={form.extra_credit_points} onChange={e => set('extra_credit_points', e.target.value)} className="wm-field" />
           </Field>
 
-          <Field label={`נקודות זיכוי נוספות (סה"כ: ${totalCredits})`}>
-            <input
-              type="number"
-              min={0}
-              max={20}
-              step={0.5}
-              value={form.extra_credit_points}
-              onChange={e => set('extra_credit_points', e.target.value)}
-              className={inputCls}
-            />
-          </Field>
+          <fieldset>
+            <legend className="wm-label">מסלול העסק</legend>
+            <div className="grid grid-cols-2 gap-2">
+              {([['zair', 'עסק זעיר'], ['regular', 'רגיל']] as const).map(([value, label]) => (
+                <button key={value} type="button" onClick={() => set('tax_track', value)} aria-pressed={form.tax_track === value}
+                  className={`wm-btn ${form.tax_track === value ? 'wm-btn-brass' : 'wm-btn-ghost'}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </fieldset>
 
-          <Field label="שם ישוב מוטב">
-            <input
-              value={form.settlement_name}
-              onChange={e => set('settlement_name', e.target.value)}
-              className={inputCls}
-              placeholder="גע'תון (השאר ריק אם לא רלוונטי)"
-            />
+          <Field id="s-settlement" label="ישוב מוטב">
+            <input id="s-settlement" value={form.settlement_name} onChange={e => set('settlement_name', e.target.value)}
+              className="wm-field" placeholder="ריק אם לא רלוונטי" />
           </Field>
-          <Field label="שיעור זיכוי ישוב (%)">
-            <input
-              type="number"
-              min={0}
-              max={30}
-              step={0.1}
-              value={form.settlement_credit_rate}
-              onChange={e => set('settlement_credit_rate', e.target.value)}
-              className={inputCls}
-            />
-          </Field>
-          <Field label="תקרת הכנסה מזכה (₪)">
-            <input
-              type="number"
-              min={0}
-              step={1000}
-              value={form.settlement_ceiling}
-              onChange={e => set('settlement_ceiling', e.target.value)}
-              className={inputCls}
-            />
-          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field id="s-rate" label="שיעור זיכוי (%)">
+              <input id="s-rate" type="number" inputMode="decimal" min={0} max={30} step={0.1}
+                value={form.settlement_credit_rate} onChange={e => set('settlement_credit_rate', e.target.value)} className="wm-field" />
+            </Field>
+            <Field id="s-ceiling" label="תקרת הכנסה מזכה (₪)">
+              <input id="s-ceiling" type="number" inputMode="numeric" min={0} step={1000}
+                value={form.settlement_ceiling} onChange={e => set('settlement_ceiling', e.target.value)} className="wm-field" />
+            </Field>
+          </div>
 
-          <Field label="הכנסה שנתית ממשכורת (₪)">
-            <input
-              type="number"
-              min={0}
-              step={1000}
-              value={form.salary_annual_income}
-              onChange={e => set('salary_annual_income', e.target.value)}
-              className={inputCls}
-              placeholder="0"
-            />
-          </Field>
+          <label className="flex items-center gap-3 min-h-11">
+            <input type="checkbox" className="size-5 accent-[var(--color-sage)]" checked={form.is_kibbutz_member}
+              onChange={e => set('is_kibbutz_member', e.target.checked)} />
+            <span>חבר קיבוץ</span>
+          </label>
+          <p className="text-[13px] text-text-mute">את המשכורת מחשבים מהתלושים ומהמשמרות. הגדרות השכר נמצאות במסך המעסיק.</p>
         </section>
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">
-            {error}
-          </div>
-        )}
-        {saved && (
-          <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-3 py-2">
-            ✓ ההגדרות נשמרו בהצלחה
-          </div>
-        )}
+        {error && <p role="alert" className="wm-error">{error}</p>}
+        {saved && <p role="status" className="text-[15px] text-sage">ההגדרות נשמרו.</p>}
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-        >
-          {saving ? 'שומר...' : 'שמור הגדרות'}
+        <button type="submit" disabled={saving} className="wm-btn wm-btn-sage w-full">
+          {saving ? 'שומר…' : 'שמור הגדרות'}
         </button>
       </form>
     </>
-  );
-}
-
-const inputCls =
-  'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500';
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      {children}
-    </div>
   );
 }

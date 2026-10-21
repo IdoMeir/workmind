@@ -61,3 +61,18 @@ export const MIN_WAGE_MONTHLY_FROM_2026_04 = 6_443.85;
 // ─── שים בצד ─────────────────────────────────────────────────
 // כמה ₪ מחזור מוצגים ביחידת "שים בצד" (לכל 100 ₪).
 export const SETASIDE_PER = 100;
+
+// ─── מועדים ─────────────────────────────────────────────────
+// MM-DD. "nextYear" = המועד חל בשנה שאחרי שנת המס.
+// מקור: רשות המסים / מע"מ — תיאום מס עד סוף השנה, הצהרת מחזור עד 31.1, דוח שנתי עד 31.3.
+export const TAX_DEADLINES = {
+  taxCoordination: { date: '12-25', nextYear: false },
+  vatTurnoverDeclaration: { date: '01-31', nextYear: true },
+  zairAnnualReport: { date: '03-31', nextYear: true },
+} as const;
+
+/** מועד שבתוכו הוא "קרוב" (alert). */
+export const DEADLINE_ALERT_DAYS = 14;
+
+/** פס תקרת העסק הזעיר מוצג רק מעל היחס הזה (מפרט סעיף 3, 10). */
+export const CEILING_DISPLAY_RATIO = 0.70;
