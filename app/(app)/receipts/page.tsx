@@ -41,7 +41,7 @@ export default function ReceiptsPage() {
             {[1, 2, 3].map(i => <div key={i} className="wm-card h-24 animate-pulse" />)}
           </div>
         ) : receipts.length === 0 ? (
-          <p className="text-[15px] text-text-mute py-8 text-center">לא הוצאו קבלות מ-WorkMind.</p>
+          <p className="text-[15px] text-text-mute py-8 text-center">לא הוצאו קבלות מבשתי ידיי.</p>
         ) : (
           receipts.map(receipt => (
             <article key={receipt.id} className="wm-card">

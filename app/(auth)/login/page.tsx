@@ -33,7 +33,9 @@ export default function LoginPage() {
     <div className="min-h-screen bg-ink text-text flex items-center justify-center p-4">
       <div className="wm-card w-full max-w-sm p-6">
         <div className="text-center mb-6">
-          <h1 className="wm-title text-[24px]">WorkMind</h1>
+          {/* eslint-disable-next-line @next/next/no-img-element -- SVG סטטי מ-public */}
+          <img src="/icons/icon.svg" width={56} height={56} alt="" className="mx-auto mb-3" />
+          <h1 className="wm-title text-[24px]">בשתי ידיי</h1>
           <p className="text-text-mute text-[15px] mt-1">ניהול עבודה לפרילנסר</p>
         </div>
 

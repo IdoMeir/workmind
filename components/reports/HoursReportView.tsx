@@ -166,7 +166,7 @@ export default function HoursReportView({ entries, client, year, month, printMod
           </div>
           <ReportTable entries={hoursEntries} totalHours={totalHours} totalAmount={totalAmount} />
           <p className="mt-6 text-[13px] text-text-mute text-center print:mt-4">
-            דו&quot;ח זה הופק מתוך WorkMind • {new Date().toLocaleDateString('he-IL')}
+            דו&quot;ח זה הופק מתוך בשתי ידיי • {new Date().toLocaleDateString('he-IL')}
           </p>
         </div>
       </div>
@@ -247,7 +247,7 @@ export default function HoursReportView({ entries, client, year, month, printMod
 
         {/* PDF footer */}
         <div style={{ marginTop: '28px', fontSize: '11px', color: '#9ca3af', textAlign: 'center' }}>
-          דו&quot;ח זה הופק מתוך WorkMind • {new Date().toLocaleDateString('he-IL')}
+          דו&quot;ח זה הופק מתוך בשתי ידיי • {new Date().toLocaleDateString('he-IL')}
         </div>
       </div>
 
@@ -275,7 +275,7 @@ export default function HoursReportView({ entries, client, year, month, printMod
             <ReportTable entries={hoursEntries} totalHours={totalHours} totalAmount={totalAmount} />
           </div>
           <p className="mt-6 text-[13px] text-text-mute text-center">
-            דו&quot;ח זה הופק מתוך WorkMind • {new Date().toLocaleDateString('he-IL')}
+            דו&quot;ח זה הופק מתוך בשתי ידיי • {new Date().toLocaleDateString('he-IL')}
           </p>
         </div>
       </div>

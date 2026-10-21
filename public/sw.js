@@ -1,4 +1,4 @@
-const CACHE = 'workmind-v2';
+const CACHE = 'bashtei-yadai-v3';
 
 self.addEventListener('install', () => {
   // Skip waiting immediately — no pre-caching of protected routes

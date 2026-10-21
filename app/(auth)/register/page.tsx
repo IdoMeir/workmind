@@ -40,7 +40,7 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-ink text-text flex items-center justify-center p-4">
       <div className="wm-card w-full max-w-sm p-6">
         <div className="text-center mb-6">
-          <h1 className="wm-title text-[24px]">WorkMind</h1>
+          <h1 className="wm-title text-[24px]">בשתי ידיי</h1>
           <p className="text-text-mute text-[15px] mt-1">יצירת חשבון חדש</p>
         </div>
 

@@ -2,8 +2,8 @@ import { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'WorkMind',
-    short_name: 'WorkMind',
+    name: 'בשתי ידיי',
+    short_name: 'בשתי ידיי',
     description: 'שכר ועסק: רישום, חודש, מס ופעולות',
     start_url: '/',
     display: 'standalone',
@@ -15,17 +15,17 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ['productivity', 'finance'],
     icons: [
       {
-        src: '/api/icons/192',
+        src: '/icons/icon-192.png',
         sizes: '192x192',
         type: 'image/png',
       },
       {
-        src: '/api/icons/512',
+        src: '/icons/icon-512.png',
         sizes: '512x512',
         type: 'image/png',
       },
       {
-        src: '/api/icons/512',
+        src: '/icons/icon-maskable-512.png',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable',

@@ -3,16 +3,20 @@ import './globals.css';
 import ServiceWorkerRegistrar from '@/components/shared/ServiceWorkerRegistrar';
 
 export const metadata: Metadata = {
-  title: 'WorkMind',
+  title: 'בשתי ידיי',
   description: 'שכר ועסק: רישום, חודש, מס ופעולות',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black',
-    title: 'WorkMind',
+    title: 'בשתי ידיי',
   },
   icons: {
-    apple: '/api/icons/192',
+    apple: '/icons/apple-touch-icon.png',
+    icon: [
+      { url: '/icons/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icons/icon.svg', type: 'image/svg+xml' },
+    ],
   },
 };
 
