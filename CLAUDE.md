@@ -4,6 +4,11 @@
 
 \> \*\*⚠️ המפרט המחייב מעכשיו: `docs/WORKMIND_V2_SPEC.md`.\*\* בכל סתירה בינו לבין הקובץ הזה — המפרט גובר. רשימת ה-NEVER בסעיף 13 שלו היא מקור האילוצים (במקום `~/.claude/CONSTRAINTS.md`). סדר הבנייה של v2 נמצא בסעיף 9 שלו, והוא מחליף את ה-Phases בקובץ הזה. מיגרציות נכתבות כקבצים ב-`supabase/migrations/`.
 
+## Supabase — NEVER
+
+- כל מיגרציה שיוצרת טבלה ב-public כוללת באותו קובץ: enable row level security + GRANT מפורש לכל role שצריך גישה, כולל service_role + פוליסות.
+- לעולם לא פוליסה ל-public עם using (true) לכתיבה.
+
 
 
 \## סקירה כללית
